@@ -32,6 +32,7 @@ typedef struct{
 
     int posicao_x;
     int posicao_y;
+    int posicaoInicial_x;
     int posicaoInicial_y;
     int alturaMaxAtinginda;
     int vidas;
@@ -89,6 +90,7 @@ typedef struct{
 
 }tMapa;
 tMapa InicializaMapa(tConfig config);
+int CalculaPosicao_y(int ordemPistaCimaBaixo);
 
 // Jogo
 typedef struct{
@@ -123,9 +125,17 @@ tGalinha InicializaGalinha(tConfig config){
     char linhaConfigGalinha[10];
     LinhaConfigPistasProcurada(config, linhaConfigGalinha, 10, 'G');
 
-    sscanf(linhaConfigGalinha, "%*c %d %d", &galinha.posicao_x,
-                                            &galinha.posicaoInicial_y);
+    sscanf(linhaConfigGalinha, "%*c %d %d", &galinha.posicaoInicial_x,
+                                            &galinha.vidas);
+    int pistaGalinha = QtdPistas(config);
+    galinha.posicaoInicial_y = CalculaPosicao_y(pistaGalinha);
 
+    galinha.posicao_x = galinha.posicaoInicial_x;
+    galinha.posicao_y = galinha.posicaoInicial_y;
+    galinha.pontuacao = 0;
+    galinha.qtdMovimentoTotal = 0;
+    galinha.qtdMovimentoBaixo = 0;
+    
     return galinha;
 }
 
@@ -273,6 +283,11 @@ tMapa InicializaMapa(tConfig config)
     InicializaPistas(mapa.pistas, mapa.qtdPistas, config);
 
     return mapa;
+}
+
+int CalculaPosicao_y(int ordemPistaCimaBaixo){
+    int posicao_y = ordemPistaCimaBaixo*3 - 2;
+    return posicao_y;
 }
 
 tJogo InicializaJogo(int argc, char *argv[])
