@@ -21,8 +21,8 @@ int QtdPistas(tConfig config);
 // Le e armazena skin personagens
 typedef struct{
 
-    char galinha[3];
-    char carro[4][2];
+    char galinha[8];
+    char carro[25];
 
 }tSkin;
 tSkin LeSkins(char *argv[]);
@@ -222,6 +222,48 @@ int QtdPistas(tConfig config){
     return config.qtdPistas;
 }
 
+tSkin LeSkins(char *argv[]){
+
+    tSkin skin;
+
+    char diretorio[1020];
+    sprintf(diretorio,"%s/personagens.txt",argv[1]);
+
+    FILE *pfile = fopen(diretorio, "r");
+    if(pfile == NULL){
+        printf("ERRO: Informe o argv com os arquivos de personagens.\n");
+        exit(1);
+    }
+
+    char ch;
+    int i;
+    for(i = 0; i < 6 ; i++){
+
+        fscanf(pfile,"%c",&ch);
+        if(ch == '\n'){
+            i--;
+            continue;
+        }
+
+        skin.galinha[i] = ch;
+    }
+    skin.galinha[i] = '\0';
+
+    for(i = 0; i < 24 ; i++){
+
+        fscanf(pfile,"%c",&ch);
+        if(ch == '\n'){
+            i--;
+            continue;
+        }
+        skin.carro[i] = ch;
+    }
+    skin.carro[i] = '\0';
+
+    fclose(pfile);
+    return skin;
+}
+
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
 {
 
@@ -299,7 +341,7 @@ tJogo InicializaJogo(int argc, char *argv[])
     jogo.mapa = InicializaMapa(jogo.config);
     jogo.galinha = InicializaGalinha(jogo.config);
 
-// Arquivo de desenho de personagens
+    jogo.skin = LeSkins(argv);
 
     return jogo;
 }
