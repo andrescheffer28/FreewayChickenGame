@@ -2,6 +2,31 @@
 #include <string.h>
 #include <stdlib.h>
 
+// Le e armazena config inicial
+typedef struct{
+
+    int ehAnimado;
+    int larguraMapa;
+    int qtdPistas;
+    char cfPistas[15][50];
+
+}tConfig;
+tConfig LeConfiguracoes(char *argv[]);
+void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite);
+void LinhaConfigPistasProcurada(tConfig config, char linhaCopia[], int limite, char keyLetra);
+int EhAnimado(tConfig config);
+int LarguraMapa(tConfig config);
+int QtdPistas(tConfig config);
+
+// Le e armazena skin personagens
+typedef struct{
+
+    char galinha[3];
+    char carro[4][2];
+
+}tSkin;
+tSkin LeSkins(char *argv[]);
+
 // Galinha
 typedef struct{
 
@@ -15,7 +40,6 @@ typedef struct{
     int qtdMovimentoBaixo;
 
 }tGalinha;
-
 tGalinha InicializaGalinha(tConfig config);
 
 // Carro
@@ -25,34 +49,7 @@ typedef struct{
     int posicao_x;
 
 }tCarro;
-
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
-
-// Le e armazena config inicial
-typedef struct{
-
-    int ehAnimado;
-    int larguraMapa;
-    int qtdPistas;
-    char cfPistas[15][50];
-
-}tConfig;
-
-tConfig LeConfiguracoes(char *argv[]);
-void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite);
-int EhAnimado(tConfig config);
-int LarguraMapa(tConfig config);
-int QtdPistas(tConfig config);
-
-// Le e armazena skin personagens
-typedef struct{
-
-    char galinha[3];
-    char carro[4][2];
-
-}tSkin;
-
-tConfig LeSkins(char *argv[]);
 
 // Pista
 typedef struct{
@@ -66,7 +63,6 @@ typedef struct{
     char direcao;
 
 }tPista;
-
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config);
 
 // Atropelamento
@@ -92,7 +88,6 @@ typedef struct{
     char planoCartesiano[35][101];
 
 }tMapa;
-
 tMapa InicializaMapa(tConfig config);
 
 // Jogo
@@ -121,7 +116,21 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]){
+tGalinha InicializaGalinha(tConfig config){
+
+    tGalinha galinha;
+
+    char linhaConfigGalinha[10];
+    LinhaConfigPistasProcurada(config, linhaConfigGalinha, 10, 'G');
+
+    sscanf(linhaConfigGalinha, "%*c %d %d", &galinha.posicao_x,
+                                            &galinha.posicaoInicial_y);
+
+    return galinha;
+}
+
+void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
+{
 
     int i;
     for(i = 0; i < qtdCarros; i++){
@@ -176,6 +185,19 @@ void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int 
 
     strncpy(copia, config.cfPistas[posicaoLinha], (limite-1));
     copia[limite-1] = '\0';
+}
+
+void LinhaConfigPistasProcurada(tConfig config, char linhaCopia[], int limite, char keyLetra){
+
+    int i;
+    for(i = 0; i < config.qtdPistas; i++){
+
+        if(config.cfPistas[i][0] == keyLetra){
+            strncpy(linhaCopia, config.cfPistas[i], (limite-1));
+            linhaCopia[limite-1] = '\0';
+            break;
+        }
+    }
 }
 
 int EhAnimado(tConfig config){
