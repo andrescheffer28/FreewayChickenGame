@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 // Galinha
@@ -15,6 +16,8 @@ typedef struct{
 
 }tGalinha;
 
+tGalinha InicializaGalinha(tConfig config);
+
 // Carro
 typedef struct{
 
@@ -23,7 +26,7 @@ typedef struct{
 
 }tCarro;
 
-void InicializaCarros(tCarro carros[], int qtdCarros, FILE *pArqConfig);
+void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
 
 // Le e armazena config inicial
 typedef struct{
@@ -31,9 +34,15 @@ typedef struct{
     int ehAnimado;
     int larguraMapa;
     int qtdPistas;
-    char configPistas[15][50];
+    char cfPistas[15][50];
 
 }tConfig;
+
+tConfig LeConfiguracoes(char *argv[]);
+void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite);
+int EhAnimado(tConfig config);
+int LarguraMapa(tConfig config);
+int QtdPistas(tConfig config);
 
 // Le e armazena skin personagens
 typedef struct{
@@ -42,6 +51,8 @@ typedef struct{
     char carro[4][2];
 
 }tSkin;
+
+tConfig LeSkins(char *argv[]);
 
 // Pista
 typedef struct{
@@ -56,7 +67,7 @@ typedef struct{
 
 }tPista;
 
-void InicializaPistas(tPista pistas[], int qtdPistas, FILE *pArqConfig);
+void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config);
 
 // Atropelamento
 typedef struct{
@@ -82,8 +93,7 @@ typedef struct{
 
 }tMapa;
 
-tMapa InicializaMapa(int largura_mapa, int qtd_pistas, FILE *pArqConfig);
-//já pode inicializar uma pista vazia e começar a leitura a partir da próxima pista;
+tMapa InicializaMapa(tConfig config);
 
 // Jogo
 typedef struct{
@@ -94,7 +104,6 @@ typedef struct{
     tGalinha galinha;
     tMapa mapa;
     int iteracao;
-    int ehAnimado;
 
     int qtdAtropelamentos;
     tAtropelamento atropelamentos[100];
@@ -103,7 +112,7 @@ typedef struct{
 
 }tJogo;
 
-tJogo InicializaJogo(int argv,char *diretorio[]);
+tJogo InicializaJogo(int argc,char *argv[]);
 
 int main(int argc, char *argv[]){
 
@@ -112,112 +121,148 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-void InicializaCarros(tCarro carros[], int qtdCarros, FILE *pArqConfig){
-    char a, b;
-    fscanf
-    printf("%c %c",a,b);
+void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]){
+
+    int i;
+    for(i = 0; i < qtdCarros; i++){
+        carros[i].id = (i+1);
+        carros[i].posicao_x = posicoesCarros_x[i];
+    }
 }
 
-void InicializaPistas(tPista pistas[], int qtdPistas, FILE *pArqConfig)
+tConfig LeConfiguracoes(char *argv[]){
+
+    tConfig config;
+
+    char diretorio[1025];
+    sprintf(diretorio,"%s/config_inicial.txt",argv[1]);
+    FILE *pfile = fopen(diretorio,"r");
+
+    if(pfile == NULL){
+        printf("ERRO: Informe o argv com os arquivos de configuracao.\n");
+        exit(1);
+    }
+
+    char linha[50];
+
+    if(fgets(linha,50,pfile) == NULL){
+        printf("Nao foi possivel ler 1nd linha arq Config\n");
+        fclose(pfile);
+        exit(1);
+    }
+    sscanf(linha,"%d",&config.ehAnimado);
+
+    if(fgets(linha,50,pfile) == NULL){
+        printf("Nao foi possivel ler 2nd linha arq Config\n");
+        fclose(pfile);
+        exit(1);
+    }
+    sscanf(linha,"%d %d",&config.larguraMapa,&config.qtdPistas);
+
+// Leitura das config de Pistas
+    int i;
+    for(i = 0; fgets(linha,50,pfile) != NULL; i++){
+
+        sprintf(config.cfPistas[i],"%s",linha);
+    }
+
+
+    fclose(pfile);
+
+    return config;
+}
+
+void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite){
+
+    strncpy(copia, config.cfPistas[posicaoLinha], (limite-1));
+    copia[limite-1] = '\0';
+}
+
+int EhAnimado(tConfig config){
+    return config.ehAnimado;
+}
+
+int LarguraMapa(tConfig config){
+    return config.larguraMapa;
+}
+
+int QtdPistas(tConfig config){
+    return config.qtdPistas;
+}
+
+void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
 {
 
-    char linhaLida[50];
+    char configPistas[52];
+
     int i;
     for(i = 0; i < qtdPistas; i++){
 
-        fgets(linhaLida, 50, pArqConfig);
+        CopiaLinhaConfigPistas(config, configPistas, i, 52);
 
-        if(linhaLida[0] == '\n'){
+        if(configPistas[0] == '\n'){
             pistas[i].id = (i+1);
             pistas[i].qtdCarros = 0;
             pistas[i].velocidade = 0;
-            pistas[i].direcao = '\0';
+            pistas[i].direcao = '0';
+            pistas[i].centro_y = i*3 + 1;
+            continue;
+        }
+
+        if(configPistas[0]  == 'G'){
+            pistas[i].id = (i+1);
+            pistas[i].qtdCarros = 0;
+            pistas[i].velocidade = 0;
+            pistas[i].direcao = '0';
             pistas[i].centro_y = i*3 + 1;
             continue;
         }
 
         pistas[i].id = (i+1);
         pistas[i].centro_y = i*3 + 1;
-        sscanf(linhaLida,"%c %d %d",&pistas[i].direcao, 
-                                    &pistas[i].velocidade, 
-                                    &pistas[i].qtdCarros);
+
+        int offset = 0;
+        sscanf(configPistas,"%c %d %d %n",  &pistas[i].direcao, 
+                                            &pistas[i].velocidade, 
+                                            &pistas[i].qtdCarros,
+                                            &offset);
         
-        InicializaCarros(pistas[i].carros, pistas[i].qtdCarros, linhaLida);
+        int posicoesCarros_x[11];
+        int j;
+        for(j = 0; j < pistas[i].qtdCarros; j++){
+            int qtdLida = 0;
+            sscanf(configPistas + offset, "%d %n",&posicoesCarros_x[j],&qtdLida);
+            offset = offset + qtdLida;
+        }
+
+        InicializaCarros(pistas[i].carros, pistas[i].qtdCarros, posicoesCarros_x);
     }
 }
 
-tMapa InicializaMapa(int largura_mapa, int qtd_pistas, FILE *pArqConfig)
+tMapa InicializaMapa(tConfig config)
 {
 
     tMapa mapa;
 
-    mapa.largura = largura_mapa;
-    mapa.altura = qtd_pistas*2 + qtd_pistas;
+    mapa.largura = LarguraMapa(config);
+    mapa.qtdPistas = QtdPistas(config);
+    mapa.altura = mapa.qtdPistas*2 + mapa.qtdPistas;
 
-    mapa.qtdPistas = qtd_pistas;
-
-    InicializaPistas(mapa.pistas, mapa.qtdPistas, pArqConfig);
+    InicializaPistas(mapa.pistas, mapa.qtdPistas, config);
 
     return mapa;
 }
 
-tJogo InicializaJogo(int argc, char *diretorio[])
+tJogo InicializaJogo(int argc, char *argv[])
 {
 
     tJogo jogo;
-    char linhaLidaAtualLeitura[20];
 
-// Arquivo de Configuracao Inicial
-    char arqConfigInicial[1021];
-    sprintf(arqConfigInicial,"%s/config_inicial.txt",diretorio[1]);
-    FILE *pArqConfigInicial = fopen(arqConfigInicial,"r");
-    if(pArqConfigInicial == NULL){
-        printf("ERRO: Informe o diretorio com os arquivos de configuracao.\n");
-        exit(1);
-    }
-
-    fgets(linhaLidaAtualLeitura,20,pArqConfigInicial);
-    if(sscanf(linhaLidaAtualLeitura, "%d",&jogo.ehAnimado) != 1){
-        printf("Nao foi possivel escolher animacao\n");
-        exit(1);
-    }
-
-    fgets(linhaLidaAtualLeitura,20,pArqConfigInicial);
-    int largura_mapa;
-    int qtd_pistas;
-    if(sscanf(linhaLidaAtualLeitura, "%d %d",&largura_mapa,&qtd_pistas) != 2){
-        printf("Nao foi possivel inicializar mapa\n");
-        exit(1);
-    }
-
-// Copia o conteudo do pArqConfigInicial para uma matriz bidimensional
-/*
-    char textoPistas[qtd_pistas][50];
-    int i;
-    for(i = 0; fgets(linhaLidaAtualLeitura, 20, pArqConfigInicial) != NULL; i++){
-        
-        int k;
-        for(k = 0; linhaLidaAtualLeitura[k] != '\0'; k++){
-
-            textoPistas[i][k] = linhaLidaAtualLeitura[k];
-        }
-
-        textoPistas[i][k] = '\0';
-    }*/
-
-    jogo.mapa = InicializaMapa(largura_mapa, qtd_pistas, pArqConfigInicial);
-
-    fclose(pArqConfigInicial);
+    jogo.config = LeConfiguracoes(argv);
+    jogo.mapa = InicializaMapa(jogo.config);
+    jogo.galinha = InicializaGalinha(jogo.config);
 
 // Arquivo de desenho de personagens
-    char arqDesenhoPersonagens[1021];
-    sprintf(arqDesenhoPersonagens,"%s/personagens.txt",diretorio[1]);
-    FILE *pArqDesenhoPersonagens = fopen(arqDesenhoPersonagens,"r");
-    if(pArqDesenhoPersonagens == NULL){
-        printf("ERRO: Informe o diretorio com os arquivos de Desenho dos Personagens.\n");
-        exit(1);
-    }
-    fclose(pArqDesenhoPersonagens);
 
     return jogo;
 }
