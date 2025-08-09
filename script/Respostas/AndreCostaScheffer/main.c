@@ -255,30 +255,27 @@ tSkin LeSkins(char *argv[]){
         exit(1);
     }
 
-    char ch;
+    char ch[50];
+    fgets(ch,50,pfile);
+    strncpy(skin.galinha, ch, 3);
+
+    fgets(ch,50,pfile);
+    strncpy(skin.galinha + 3, ch, 3);
+
+    skin.galinha[6] = '\0';
+
     int i;
-    for(i = 0; i < 6 ; i++){
+    for(i = 0; i < 4 ; i++){
 
-        fscanf(pfile,"%c",&ch);
-        if(ch == '\n'){
-            i--;
-            continue;
-        }
+        int offset = i*6;
 
-        skin.galinha[i] = ch;
+        fgets(ch,50,pfile);
+        strncpy(skin.carro + offset, ch, 3);
+
+        fgets(ch,50,pfile);
+        strncpy(skin.carro + offset + 3, ch, 3);
     }
-    skin.galinha[i] = '\0';
-
-    for(i = 0; i < 24 ; i++){
-
-        fscanf(pfile,"%c",&ch);
-        if(ch == '\n'){
-            i--;
-            continue;
-        }
-        skin.carro[i] = ch;
-    }
-    skin.carro[i] = '\0';
+    skin.carro[24] = '\0';
 
     fclose(pfile);
     return skin;
