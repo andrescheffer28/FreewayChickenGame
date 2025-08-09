@@ -8,6 +8,8 @@ typedef struct{
     int ehAnimado;
     int larguraMapa;
     int qtdPistas;
+    
+    //configPistas
     char cfPistas[15][50];
 
 }tConfig;
@@ -34,6 +36,7 @@ typedef struct{
     int posicao_y;
     int posicaoInicial_x;
     int posicaoInicial_y;
+    int pistaInicial_id;
     int alturaMaxAtinginda;
     int vidas;
     int pontuacao;
@@ -51,6 +54,7 @@ typedef struct{
 
 }tCarro;
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
+int CarroPosicao_x(tCarro carro);
 
 // Pista
 typedef struct{
@@ -65,6 +69,7 @@ typedef struct{
 
 }tPista;
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config);
+int CentroPistaPosicao_y(tPista pista);
 
 // Atropelamento
 typedef struct{
@@ -86,11 +91,15 @@ typedef struct{
     int qtdPistas;
     tPista pistas[13];
 
-    char planoCartesiano[35][101];
+    // 100 colunas de espaço, 2 para bordas -0 e 101-, e 1 \0
+    char desenhoMapa[35][102];
 
 }tMapa;
 tMapa InicializaMapa(tConfig config);
+tMapa DesenhaCenario(tMapa mapa);
+void ImprimeMapa(tMapa mapa);
 int CalculaPosicao_y(int ordemPistaCimaBaixo);
+int CalculaAlturaSemBorda(int qtdPistas);
 
 // Jogo
 typedef struct{
@@ -110,6 +119,12 @@ typedef struct{
 }tJogo;
 
 tJogo InicializaJogo(int argc,char *argv[]);
+void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, const char skin[], int inicioSkinMatriz);
+void DesenhaGalinha(char desenhoMapa[][102], tGalinha galinha, const char skinGalinha[]);
+void DesenhaCarros(char desenhoMapa[][102], tPista pista, const char skinCarro[]);
+tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
+//tMapa AdicionaBordas(tMapa mapa);
+void DesenhaMapa(tJogo jogo);
 
 int main(int argc, char *argv[]){
 
@@ -132,6 +147,7 @@ tGalinha InicializaGalinha(tConfig config){
 
     galinha.posicao_x = galinha.posicaoInicial_x;
     galinha.posicao_y = galinha.posicaoInicial_y;
+    galinha.pistaInicial_id = QtdPistas(config);
     galinha.pontuacao = 0;
     galinha.qtdMovimentoTotal = 0;
     galinha.qtdMovimentoBaixo = 0;
@@ -147,6 +163,10 @@ void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
         carros[i].id = (i+1);
         carros[i].posicao_x = posicoesCarros_x[i];
     }
+}
+
+int CarroPosicao_x(tCarro carro){
+    return carro.posicao_x;
 }
 
 tConfig LeConfiguracoes(char *argv[]){
@@ -313,6 +333,10 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
     }
 }
 
+int CentroPistaPosicao_y(tPista pista){
+    return pista.centro_y;
+}
+
 tMapa InicializaMapa(tConfig config)
 {
 
@@ -320,16 +344,100 @@ tMapa InicializaMapa(tConfig config)
 
     mapa.largura = LarguraMapa(config);
     mapa.qtdPistas = QtdPistas(config);
-    mapa.altura = mapa.qtdPistas*2 + mapa.qtdPistas;
+
+    // Desconsidera as bordas
+    // 2 linhas em branco + 1 linha padrao, por pista
+    //mapa.altura = mapa.qtdPistas*2 + mapa.qtdPistas;
+    mapa.altura = CalculaAlturaSemBorda(mapa.qtdPistas);
 
     InicializaPistas(mapa.pistas, mapa.qtdPistas, config);
 
     return mapa;
 }
 
+// qtd de linhas totais - inclui bordas
+// 27 = 25 + 2
+// 47 = 45 + 2
+
+// qtd de colunas totais - inclui bordas
+// 13 = 4*3 + 1
+// 16 = 5*3 + 1
+
+tMapa DesenhaCenario(tMapa mapa){
+
+    int i;
+    for(i = 0; i < mapa.qtdPistas - 1; i++){
+
+        int altura = CalculaAlturaSemBorda(i+1);
+        int j;
+        for(j = (altura - 3); j < altura; j++){
+
+            //desenha 2 linhas vazias
+            if(j <= (altura - 2)){
+                int k;
+                for(k = 0; k < mapa.largura; k++){
+                    mapa.desenhoMapa[j][k] = ' ';
+                }
+
+            //desenha 1 linha padrao entre pistas
+            }else{
+                int k;
+                for(k = 0; k < mapa.largura; k++){
+
+                    if((k + 1)%3){
+                        mapa.desenhoMapa[j][k] = '-';
+                    }else{
+                        mapa.desenhoMapa[j][k] = ' ';
+                    }
+                }
+            }
+        }
+    }
+
+    // Desenha Pista Inicial Galinha
+    int altura  = CalculaAlturaSemBorda(mapa.qtdPistas);
+    for(i = altura - 3; i < altura; i++){
+        int j;
+        for(j = 0; j < mapa.largura; j++){
+            mapa.desenhoMapa[i][j] = ' ';
+        }
+    }
+    return mapa;
+}
+
+// Fixar impressão depois, n esta considerando bordas
+void ImprimeMapa(tMapa mapa){
+
+    int i;
+    for(i = 0; i < mapa.altura; i++){
+
+        int j;
+        for(j = 0; j < mapa.largura; j++){
+
+            printf("%c",mapa.desenhoMapa[i][j]);
+        }
+
+        // i tem q ser menor do que, n pode colocar i !=
+        if(i < (mapa.altura-2)){
+            printf("\n");
+        }
+    }
+}
+
 int CalculaPosicao_y(int ordemPistaCimaBaixo){
     int posicao_y = ordemPistaCimaBaixo*3 - 2;
     return posicao_y;
+}
+
+// 1 pista corresponde a 1
+int CalculaAlturaSemBorda(int qtdPistas){
+
+    // Cada Pista tem 2 linhas vazias
+    // e uma linha padrao
+    int altura;
+    altura = qtdPistas*2 + qtdPistas;
+
+    return altura;
 }
 
 tJogo InicializaJogo(int argc, char *argv[])
@@ -343,5 +451,82 @@ tJogo InicializaJogo(int argc, char *argv[])
 
     jogo.skin = LeSkins(argv);
 
+    DesenhaMapa(jogo);
     return jogo;
+}
+
+// se for do tipo 2altura x 3 largura
+void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, const char skin[], int inicioSkinMatriz){
+    int j = inicioSkinMatriz;
+    int cabecaCentro_x = centro_x - 1;
+    int cabecaCentro_y = centro_y - 1;
+    desenhoMapa[cabecaCentro_y][cabecaCentro_x-1] = skin[j+0];
+    desenhoMapa[cabecaCentro_y][cabecaCentro_x] = skin[j+1];
+    desenhoMapa[cabecaCentro_y][cabecaCentro_x+1] = skin[j+2];
+
+    int corpoCentro_x = centro_x - 1;
+    int corpoCentro_y = (centro_y - 1) + 1;
+    desenhoMapa[corpoCentro_y][corpoCentro_x-1] = skin[j+3];
+    desenhoMapa[corpoCentro_y][corpoCentro_x] = skin[j+4];
+    desenhoMapa[corpoCentro_y][corpoCentro_x+1] = skin[j+5];
+}
+
+void DesenhaGalinha(char desenhoMapa[][102], tGalinha galinha, const char skinGalinha[]){
+
+    int inicioSkinMatriz = 0;
+    DesenhaQualquerEntidade(desenhoMapa, galinha.posicao_x, galinha.posicao_y, skinGalinha, inicioSkinMatriz);
+    /*
+    int cabecaCentro_x = galinha.posicao_x - 1;
+    int cabecaCentro_y = galinha.posicao_y - 1;
+    desenhoMapa[cabecaCentro_y][cabecaCentro_x-1] = skinGalinha[0];
+    desenhoMapa[cabecaCentro_y][cabecaCentro_x] = skinGalinha[1];
+    desenhoMapa[cabecaCentro_y][cabecaCentro_x+1] = skinGalinha[2];
+
+    int corpoCentro_x = galinha.posicao_x - 1;
+    int corpoCentro_y = (galinha.posicao_y - 1) + 1;
+    desenhoMapa[corpoCentro_y][corpoCentro_x-1] = skinGalinha[3];
+    desenhoMapa[corpoCentro_y][corpoCentro_x] = skinGalinha[4];
+    desenhoMapa[corpoCentro_y][corpoCentro_x+1] = skinGalinha[5];*/
+}
+
+void DesenhaCarros(char desenhoMapa[][102], tPista pista, const char skinCarro[]){
+
+    int i;
+    for(i = 0; i < pista.qtdCarros; i++){
+
+        int posicao_x = CarroPosicao_x(pista.carros[i]);
+        int posicao_y = pista.centro_y;
+        
+        DesenhaQualquerEntidade(desenhoMapa, posicao_x, posicao_y, skinCarro, 0);
+    }
+}
+
+tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa){
+
+    int i;
+    for(i = 0; i < mapa.qtdPistas; i++){
+        
+        int posicaoPista_y = CentroPistaPosicao_y(mapa.pistas[i]);
+        if(posicaoPista_y == galinha.posicao_y){
+            DesenhaGalinha(mapa.desenhoMapa, galinha, skins.galinha);
+        }
+
+        DesenhaCarros(mapa.desenhoMapa, mapa.pistas[i], skins.carro);
+    }
+    return mapa;
+}
+
+tMapa AdicionaBordas(tMapa mapa){
+
+
+
+    return mapa;
+}
+
+void DesenhaMapa(tJogo jogo){
+
+    jogo.mapa = DesenhaCenario(jogo.mapa);
+    jogo.mapa = DesenhaPersonagensMapa(jogo.galinha, jogo.skin, jogo.mapa);
+    //jogo.mapa = AdicionaBordas(jogo.mapa);
+    ImprimeMapa(jogo.mapa);
 }
