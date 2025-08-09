@@ -119,9 +119,9 @@ typedef struct{
 }tJogo;
 
 tJogo InicializaJogo(int argc,char *argv[]);
-void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, const char skin[], int inicioSkinMatriz);
-void DesenhaGalinha(char desenhoMapa[][102], tGalinha galinha, const char skinGalinha[]);
-void DesenhaCarros(char desenhoMapa[][102], tPista pista, const char skinCarro[]);
+void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
+void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
+void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
 void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha);
 tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
 tMapa DesenhaMapa(tJogo jogo);
@@ -474,36 +474,43 @@ tJogo InicializaJogo(int argc, char *argv[])
 }
 
 // se for do tipo 2altura x 3 largura
-void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, const char skin[], int inicioSkinMatriz){
+void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz){
     int j = inicioSkinMatriz;
-    int cabecaCentro_x = centro_x - 1;
+    int centroMatriz_x = centro_x - 1;
     int cabecaCentro_y = centro_y - 1;
-    desenhoMapa[cabecaCentro_y][cabecaCentro_x-1] = skin[j+0];
-    desenhoMapa[cabecaCentro_y][cabecaCentro_x] = skin[j+1];
-    desenhoMapa[cabecaCentro_y][cabecaCentro_x+1] = skin[j+2];
 
-    int corpoCentro_x = centro_x - 1;
-    int corpoCentro_y = (centro_y - 1) + 1;
-    desenhoMapa[corpoCentro_y][corpoCentro_x-1] = skin[j+3];
-    desenhoMapa[corpoCentro_y][corpoCentro_x] = skin[j+4];
-    desenhoMapa[corpoCentro_y][corpoCentro_x+1] = skin[j+5];
+    int esquerda_x = centroMatriz_x - 1;
+    int direita_x = centroMatriz_x + 1;
+
+    esquerda_x = (esquerda_x%larguraMapa + larguraMapa)%larguraMapa;
+    centroMatriz_x = (centroMatriz_x%larguraMapa + larguraMapa)%larguraMapa;
+    direita_x = (direita_x%larguraMapa + larguraMapa)%larguraMapa;
+
+    desenhoMapa[cabecaCentro_y][esquerda_x] = skin[j+0];
+    desenhoMapa[cabecaCentro_y][centroMatriz_x] = skin[j+1];
+    desenhoMapa[cabecaCentro_y][direita_x] = skin[j+2];
+
+    int corpoCentro_y = cabecaCentro_y + 1;
+    desenhoMapa[corpoCentro_y][esquerda_x] = skin[j+3];
+    desenhoMapa[corpoCentro_y][centroMatriz_x] = skin[j+4];
+    desenhoMapa[corpoCentro_y][direita_x] = skin[j+5];
 }
 
-void DesenhaGalinha(char desenhoMapa[][102], tGalinha galinha, const char skinGalinha[]){
+void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]){
 
     int inicioSkinMatriz = 0;
-    DesenhaQualquerEntidade(desenhoMapa, galinha.posicao_x, galinha.posicao_y, skinGalinha, inicioSkinMatriz);
+    DesenhaQualquerEntidade(desenhoMapa, galinha.posicao_x, galinha.posicao_y, larguraMapa, skinGalinha, inicioSkinMatriz);
 }
 
-void DesenhaCarros(char desenhoMapa[][102], tPista pista, const char skinCarro[]){
+void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]){
 
     int i;
     for(i = 0; i < pista.qtdCarros; i++){
 
         int posicao_x = CarroPosicao_x(pista.carros[i]);
         int posicao_y = pista.centro_y;
-        
-        DesenhaQualquerEntidade(desenhoMapa, posicao_x, posicao_y, skinCarro, 0);
+        int inicioSkinMatriz = 0;
+        DesenhaQualquerEntidade(desenhoMapa, posicao_x, posicao_y, larguraMapa, skinCarro, inicioSkinMatriz);
     }
 }
 
@@ -530,10 +537,10 @@ tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa){
         
         int posicaoPista_y = CentroPistaPosicao_y(mapa.pistas[i]);
         if(posicaoPista_y == galinha.posicao_y){
-            DesenhaGalinha(mapa.desenhoMapa, galinha, skins.galinha);
+            DesenhaGalinha(mapa.desenhoMapa, mapa.largura, galinha, skins.galinha);
         }
 
-        DesenhaCarros(mapa.desenhoMapa, mapa.pistas[i], skins.carro);
+        DesenhaCarros(mapa.desenhoMapa, mapa.largura, mapa.pistas[i], skins.carro);
     }
     return mapa;
 }
