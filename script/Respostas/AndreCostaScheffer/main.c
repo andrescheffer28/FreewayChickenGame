@@ -15,7 +15,7 @@ tConfig LeConfiguracoes(char *argv[]);
 void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite);
 void LinhaConfigPistasProcurada(tConfig config, char linhaCopia[], int limite, char keyLetra);
 int EhAnimado(tConfig config);
-int LarguraMapaConfig(tConfig config);
+int LarguraMapa(tConfig config);
 int QtdPistas(tConfig config);
 
 // Le e armazena skin personagens
@@ -26,11 +26,6 @@ typedef struct{
 
 }tSkin;
 tSkin LeSkins(char *argv[]);
-
-void ImprimeMembroGalinha(int membro);
-void ImprimeMembroCarro(int membro);
-
-//void trocaImagem(const char sequencia[], char proximaImagem[], )
 
 // Galinha
 typedef struct{
@@ -47,7 +42,6 @@ typedef struct{
 
 }tGalinha;
 tGalinha InicializaGalinha(tConfig config);
-int PosicaoGalinha_x(tGalinha galinha);
 
 // Carro
 typedef struct{
@@ -69,12 +63,8 @@ typedef struct{
     int velocidade;
     char direcao;
 
-    int temGalinha;
-
 }tPista;
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config);
-int EhPistaVazia(tPista pista);
-int TemGalinhaPista(tPista pista);
 
 // Atropelamento
 typedef struct{
@@ -96,33 +86,17 @@ typedef struct{
     int qtdPistas;
     tPista pistas[13];
 
-    //max 35 101
-    char desenhoMapa[37][105];
+    char planoCartesiano[35][101];
 
 }tMapa;
 tMapa InicializaMapa(tConfig config);
 int CalculaPosicao_y(int ordemPistaCimaBaixo);
-int LarguraMapa(tMapa mapa);
-//void DesenhaMapa(tMapa mapa, tGalinha galinha);
-
-// Imprime Mapa
-typedef struct{
-
-    char estruturaExtremos[37];
-    char estruturaEntrePistas[37];
-
-}tEstruturaVisual;
-
-void InicializaExtremos(char estruturaExtremos[], tMapa mapa);
-void InicializaEstruturaEntrePistas(char estruturaEntrePistas[], tMapa mapa);
-tEstruturaVisual InicializaVisual(tMapa mapa ,tSkin skin);
 
 // Jogo
 typedef struct{
 
     tConfig config;
     tSkin skin;
-    tEstruturaVisual visual;
 
     tGalinha galinha;
     tMapa mapa;
@@ -136,9 +110,6 @@ typedef struct{
 }tJogo;
 
 tJogo InicializaJogo(int argc,char *argv[]);
-
-// Arquivos de saida
-//void InicializacaoTXT(tGalinha galinha, tMapa mapa,)
 
 int main(int argc, char *argv[]){
 
@@ -166,10 +137,6 @@ tGalinha InicializaGalinha(tConfig config){
     galinha.qtdMovimentoBaixo = 0;
     
     return galinha;
-}
-
-int PosicaoGalinha_x(tGalinha galinha){
-    return galinha.posicao_x;
 }
 
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
@@ -247,7 +214,7 @@ int EhAnimado(tConfig config){
     return config.ehAnimado;
 }
 
-int LarguraMapaConfig(tConfig config){
+int LarguraMapa(tConfig config){
     return config.larguraMapa;
 }
 
@@ -297,30 +264,6 @@ tSkin LeSkins(char *argv[]){
     return skin;
 }
 
-// membro 0 - cabeca
-// membro 3 - corpo
-void ImprimeMembroGalinha(int membro){
-
-    tSkin skin;
-
-    int i;
-    for(i = 0 + membro; skin.galinha[i] != '\0'; i++){
-        printf("%c",skin.galinha[i]);
-    }
-}
-
-// membro 0 - cabeca
-// membro 3 - corpo
-void ImprimeMembroCarro(int membro){
-
-    tSkin skin;
-
-    int i;
-    for(i = 0 + membro; skin.carro[i] != '\0'; i++){
-        printf("%c",skin.carro[i]);
-    }
-}
-
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
 {
 
@@ -330,8 +273,6 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
     for(i = 0; i < qtdPistas; i++){
 
         CopiaLinhaConfigPistas(config, configPistas, i, 52);
-
-        pistas[i].temGalinha = 0;
 
         if(configPistas[0] == '\n'){
             pistas[i].id = (i+1);
@@ -348,7 +289,6 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
             pistas[i].velocidade = 0;
             pistas[i].direcao = '0';
             pistas[i].centro_y = i*3 + 1;
-            pistas[i].temGalinha = 1;
             continue;
         }
 
@@ -373,25 +313,12 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
     }
 }
 
-int EhPistaVazia(tPista pista){
-
-    if(pista.qtdCarros == 0){
-        return 1;
-    }
-
-    return 0;
-}
-
-int TemGalinhaPista(tPista pista){
-    return pista.temGalinha;
-}
-
 tMapa InicializaMapa(tConfig config)
 {
 
     tMapa mapa;
 
-    mapa.largura = LarguraMapaConfig(config);
+    mapa.largura = LarguraMapa(config);
     mapa.qtdPistas = QtdPistas(config);
     mapa.altura = mapa.qtdPistas*2 + mapa.qtdPistas;
 
@@ -405,47 +332,6 @@ int CalculaPosicao_y(int ordemPistaCimaBaixo){
     return posicao_y;
 }
 
-int LarguraMapa(tMapa mapa){
-    return mapa.largura;
-}
-
-void InicializaExtremos(char estruturaExtremos[], tMapa mapa){
-
-    estruturaExtremos[0] = '|';
-    int i;
-    for(i = 1; i <= LarguraMapa(mapa); i++){
-        estruturaExtremos[i] = '-';
-    }
-    estruturaExtremos[i] = '|';
-    estruturaExtremos[i+1] = '\n';
-}
-
-void InicializaEstruturaEntrePistas(char estruturaEntrePistas[], tMapa mapa){
-
-    estruturaEntrePistas[0] = '|';
-    int i;
-    for(i = 1; i <= LarguraMapa(mapa); i++){
-
-        if(!(i%3)){
-            estruturaEntrePistas[i] = ' ';
-            continue;
-        }
-
-        estruturaEntrePistas[i] = '-';
-    }
-    estruturaEntrePistas[i] = '|';
-    estruturaEntrePistas[i+1] = '\n';
-}
-
-tEstruturaVisual InicializaVisual(tMapa mapa, tSkin skin){
-
-    tEstruturaVisual estruturaVisual;
-    InicializaExtremos(estruturaVisual.estruturaExtremos, mapa);
-    InicializaEstruturaEntrePistas(estruturaVisual.estruturaEntrePistas, mapa);
-
-    return estruturaVisual;
-}
-
 tJogo InicializaJogo(int argc, char *argv[])
 {
 
@@ -454,8 +340,8 @@ tJogo InicializaJogo(int argc, char *argv[])
     jogo.config = LeConfiguracoes(argv);
     jogo.mapa = InicializaMapa(jogo.config);
     jogo.galinha = InicializaGalinha(jogo.config);
+
     jogo.skin = LeSkins(argv);
-    jogo.visual = InicializaVisual(jogo.mapa, jogo.skin);
-    
+
     return jogo;
 }
