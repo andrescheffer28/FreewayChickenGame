@@ -37,6 +37,7 @@ typedef struct{
     int posicaoInicial_x;
     int posicaoInicial_y;
     int pistaInicial_id;
+    int alturaMaxVidaAtual;
     int alturaMaxAtinginda;
     int vidas;
     int pontuacao;
@@ -135,6 +136,7 @@ typedef struct{
 tJogo InicializaJogo(int argc,char *argv[]);
 tJogo ExecutaJogo(tJogo jogo);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
+tGalinha ProcessaGalinha(tMapa mapa, tGalinha galinha);
 
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
@@ -146,6 +148,7 @@ tMapa DesenhaMapa(tJogo jogo);
 void ImprimePlacar(tJogo jogo);
 
 char TerminalInput(tJogo jogo);
+int EstaColidindo(tPista pista, tGalinha galinha);
 
 int main(int argc, char *argv[]){
 
@@ -171,7 +174,11 @@ tGalinha InicializaGalinha(tConfig config){
     galinha.posicaoInicial_y = CalculaPosicao_y(pistaGalinha);
 
     galinha.posicao_x = galinha.posicaoInicial_x;
+
     galinha.posicao_y = galinha.posicaoInicial_y;
+    galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
+    galinha.alturaMaxAtinginda = galinha.posicaoInicial_y;
+
     galinha.pistaInicial_id = QtdPistas(config);
     galinha.pontuacao = 0;
     galinha.qtdMovimentoTotal = 0;
@@ -181,7 +188,13 @@ tGalinha InicializaGalinha(tConfig config){
 }
 
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_y){
+    
     galinha.posicao_y = novaPosicao_y;
+
+    if(galinha.alturaMaxAtinginda > galinha.posicao_y){
+        galinha.alturaMaxAtinginda = galinha.posicao_y;
+    }
+
     return galinha;
 }
 
@@ -190,12 +203,15 @@ tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
 
     if(respostaUsuario == 'w'){
         int moveCima  = -3;
+        galinha.qtdMovimentoTotal++;
         galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + moveCima));
 
     }else if(respostaUsuario == 's'){
         
         if(galinha.posicao_y != galinha.posicaoInicial_y){
             int moveBaixo = + 3;
+            galinha.qtdMovimentoTotal++;
+            galinha.qtdMovimentoBaixo++;
             galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + moveBaixo));
 
         }else if(galinha.posicao_y == galinha.posicaoInicial_y){
@@ -367,14 +383,14 @@ tSkin LeSkins(char *argv[]){
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
 {
 
-    char configPistas[52];
+    char configPista[52];
 
     int i;
     for(i = 0; i < qtdPistas; i++){
 
-        CopiaLinhaConfigPistas(config, configPistas, i, 52);
+        CopiaLinhaConfigPistas(config, configPista, i, 52);
 
-        if(configPistas[0] == '\n'){
+        if(configPista[0] == '\n'){
             pistas[i].id = (i+1);
             pistas[i].qtdCarros = 0;
             pistas[i].velocidade = 0;
@@ -383,7 +399,7 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
             continue;
         }
 
-        if(configPistas[0]  == 'G'){
+        if(configPista[0]  == 'G'){
             pistas[i].id = (i+1);
             pistas[i].qtdCarros = 0;
             pistas[i].velocidade = 0;
@@ -396,7 +412,7 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
         pistas[i].centro_y = i*3 + 1;
 
         int offset = 0;
-        sscanf(configPistas,"%c %d %d %n",  &pistas[i].direcao, 
+        sscanf(configPista,"%c %d %d %n",  &pistas[i].direcao, 
                                             &pistas[i].velocidade, 
                                             &pistas[i].qtdCarros,
                                             &offset);
@@ -405,7 +421,7 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
         int j;
         for(j = 0; j < pistas[i].qtdCarros; j++){
             int qtdLida = 0;
-            sscanf(configPistas + offset, "%d %n",&posicoesCarros_x[j],&qtdLida);
+            sscanf(configPista + offset, "%d %n",&posicoesCarros_x[j],&qtdLida);
             offset = offset + qtdLida;
         }
 
@@ -586,11 +602,12 @@ tJogo ExecutaJogo(tJogo jogo){
     char userResposta = TerminalInput(jogo);
     if(userResposta != '0'){
 
-        ImprimePlacar(jogo);
+        jogo.iteracao++;
 
         jogo = AtualizaEntidades(jogo, userResposta);
+
+        ImprimePlacar(jogo);
         jogo.mapa = DesenhaMapa(jogo);
-        
         ImprimeMapa(jogo.mapa, stdout);
     }
 
@@ -602,7 +619,43 @@ tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
     jogo.galinha = MoveGalinha(jogo.galinha, inputUsuario);
     jogo.mapa = AtualizaMapa(jogo.mapa);
 
+    jogo.galinha = ProcessaGalinha(jogo.mapa, jogo.galinha);
+
     return jogo;
+}
+
+// verifica colisao, reseta a galinha caso haja
+// caso contrario, aumenta a pontuacao
+tGalinha ProcessaGalinha(tMapa mapa, tGalinha galinha){
+
+    int i;
+    for(i = 0; i < mapa.qtdPistas; i++){
+
+        int pos_y = CentroPistaPosicao_y(mapa.pistas[i]);
+        if(pos_y == galinha.posicao_y){
+
+            if(EstaColidindo(mapa.pistas[i], galinha)){
+
+                galinha.vidas--;
+                galinha.pontuacao = 0;
+                galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
+                galinha.posicao_y = galinha.posicaoInicial_y;
+
+                return galinha;
+            }else{
+
+                if(galinha.posicao_y < galinha.alturaMaxVidaAtual){
+
+                    galinha.alturaMaxVidaAtual = galinha.posicao_y;
+                    galinha.pontuacao++;
+                }
+
+                return galinha;
+            }
+        }
+    }
+
+    return galinha;
 }
 
 // se for do tipo 2altura x 3 largura
@@ -714,4 +767,31 @@ char TerminalInput(tJogo jogo){
     }
 
     return '0';
+}
+
+// Verifique se na pista atual da galinha, ha
+// alguma carro colindindo com ela
+int EstaColidindo(tPista pista, tGalinha galinha){
+
+    if(!pista.qtdCarros)
+    return 0;
+
+    int galinhaEsquerda = galinha.posicao_x - 1;
+    int galinhaDireita = galinha.posicao_x + 1;
+
+    int i;
+    for(i = 0; i < pista.qtdCarros; i++){
+
+        int carro_x = CarroPosicao_x(pista.carros[i]);
+        int carroEsquerda = carro_x - 1;
+        int carroDireita = carro_x + 1;
+
+        if((galinha.posicao_x >= carroEsquerda && galinha.posicao_x <= carroDireita) ||
+            galinhaDireita == carroEsquerda || galinhaEsquerda == carroDireita){
+            printf("colisao\n");
+            return 1;
+        }
+    }
+
+    return 0;
 }
