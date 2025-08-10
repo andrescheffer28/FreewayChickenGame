@@ -48,6 +48,7 @@ typedef struct{
 tGalinha InicializaGalinha(tConfig config);
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_x);
 tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario);
+tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha);
 
 int GalinhaPosicao_y(tGalinha galinha);
 int GalinhaPontuacao(tGalinha galinha);
@@ -63,6 +64,7 @@ typedef struct{
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
 void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, int velocidade, int limitePista);
 int CarroPosicao_x(tCarro carro);
+int Carro_id(tCarro carro);
 
 // Pista
 typedef struct{
@@ -81,7 +83,9 @@ int CentroPistaPosicao_y(tPista pista);
 
 void AtualizaPistas(tPista pistas[], int qtdPistas, int largura);
 
-// Atropelamento
+// Atropelamento;
+// usar iteracao como busca pra
+// espaco vazio
 typedef struct{
 
     int iteracao;
@@ -91,6 +95,9 @@ typedef struct{
     int galinha_y;
 
 }tAtropelamento;
+void InicializaAtropIteracao_id(tAtropelamento atropelamento[]);
+void RegistraAtropelamento( tAtropelamento atropelamento[], tPista pista, 
+                            tGalinha galinha, int carro_id,int iteracao );
 
 // Mapa
 typedef struct{
@@ -136,7 +143,7 @@ typedef struct{
 tJogo InicializaJogo(int argc,char *argv[]);
 tJogo ExecutaJogo(tJogo jogo);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
-tGalinha ProcessaGalinha(tMapa mapa, tGalinha galinha);
+tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], int iteracao);
 
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
@@ -149,12 +156,15 @@ void ImprimePlacar(tJogo jogo);
 
 char TerminalInput(tJogo jogo);
 int EstaColidindo(tPista pista, tGalinha galinha);
+int EhVitoria(tMapa mapa, tGalinha galinha);
+int FimDeJogo(tJogo jogo);
 
 int main(int argc, char *argv[]){
 
     tJogo jogo = InicializaJogo(argc, argv);
 
-    while(1){
+    while(!FimDeJogo(jogo)){
+
         jogo = ExecutaJogo(jogo);
     }
 
@@ -227,6 +237,11 @@ tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
     return galinha;
 }
 
+tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha){
+    galinha.pontuacao += 10;  
+    return galinha;
+}
+
 int GalinhaPosicao_y(tGalinha galinha){
     return galinha.posicao_y;
 }
@@ -266,6 +281,10 @@ void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, int velocidade, int l
 
 int CarroPosicao_x(tCarro carro){
     return carro.posicao_x;
+}
+
+int Carro_id(tCarro carro){
+    return carro.id;
 }
 
 tConfig LeConfiguracoes(char *argv[]){
@@ -446,6 +465,33 @@ void AtualizaPistas(tPista pistas[], int qtdPistas, int largura){
     }
 }
 
+void InicializaAtropIteracao_id(tAtropelamento atropelamento[]){
+
+    int i;
+    for(i = 0; i < 90; i++){
+        atropelamento[i].iteracao = 0;
+    }
+}
+
+void RegistraAtropelamento( tAtropelamento atropelamento[], tPista pista, 
+                            tGalinha galinha, int carro_id,int iteracao){
+
+    int i;
+    int limiteAtrop = 90;
+    for(i = 0; i < limiteAtrop; i++){
+        
+        if(!atropelamento[i].iteracao){
+
+            atropelamento[i].iteracao = iteracao;
+            atropelamento[i].pista_id = pista.id;
+            atropelamento[i].carro_id = carro_id;
+            atropelamento[i].galinha_x = galinha.posicao_x;
+            atropelamento[i].galinha_y = galinha.posicao_y;
+            break;
+        }
+    }
+}
+
 tMapa InicializaMapa(tConfig config)
 {
 
@@ -587,6 +633,7 @@ tJogo InicializaJogo(int argc, char *argv[])
     jogo.config = LeConfiguracoes(argv);
     jogo.mapa = InicializaMapa(jogo.config);
     jogo.galinha = InicializaGalinha(jogo.config);
+    InicializaAtropIteracao_id(jogo.atropelamentos);
     jogo.skin = LeSkins(argv);
     jogo.mapa = DesenhaMapa(jogo);
 
@@ -619,14 +666,15 @@ tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
     jogo.galinha = MoveGalinha(jogo.galinha, inputUsuario);
     jogo.mapa = AtualizaMapa(jogo.mapa);
 
-    jogo.galinha = ProcessaGalinha(jogo.mapa, jogo.galinha);
+    jogo.galinha = ProcessaGalinhaAtropelamento(jogo.mapa, jogo.galinha, jogo.atropelamentos, jogo.iteracao);
 
     return jogo;
 }
 
 // verifica colisao, reseta a galinha caso haja
+// salva atropelamento na matriz de atropelamentos;
 // caso contrario, aumenta a pontuacao
-tGalinha ProcessaGalinha(tMapa mapa, tGalinha galinha){
+tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], int iteracao){
 
     int i;
     for(i = 0; i < mapa.qtdPistas; i++){
@@ -634,7 +682,10 @@ tGalinha ProcessaGalinha(tMapa mapa, tGalinha galinha){
         int pos_y = CentroPistaPosicao_y(mapa.pistas[i]);
         if(pos_y == galinha.posicao_y){
 
-            if(EstaColidindo(mapa.pistas[i], galinha)){
+            int carro_id = EstaColidindo(mapa.pistas[i], galinha);
+            if(carro_id){
+
+                RegistraAtropelamento(atropleamentos, mapa.pistas[i], galinha, carro_id, iteracao);
 
                 galinha.vidas--;
                 galinha.pontuacao = 0;
@@ -771,6 +822,8 @@ char TerminalInput(tJogo jogo){
 
 // Verifique se na pista atual da galinha, ha
 // alguma carro colindindo com ela
+// se houver, retorna o carro_id
+// se nao houver, retorna 0
 int EstaColidindo(tPista pista, tGalinha galinha){
 
     if(!pista.qtdCarros)
@@ -788,9 +841,37 @@ int EstaColidindo(tPista pista, tGalinha galinha){
 
         if((galinha.posicao_x >= carroEsquerda && galinha.posicao_x <= carroDireita) ||
             galinhaDireita == carroEsquerda || galinhaEsquerda == carroDireita){
-            printf("colisao\n");
-            return 1;
+
+            int carro_id = Carro_id(pista.carros[i]);
+            return carro_id;
         }
+    }
+
+    return 0;
+}
+
+int EhVitoria(tMapa mapa, tGalinha galinha){
+
+    int ultimaPista_y = CalculaPosicao_y(1);
+    if(ultimaPista_y == galinha.posicao_y)
+    return 1;
+
+    return 0;
+}
+
+int FimDeJogo(tJogo jogo){
+
+    if(EhVitoria(jogo.mapa, jogo.galinha)){
+
+        int qtdGanhaPts = 10;
+        jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanhaPts);
+        printf("Parabens! Voce atravessou todas as pistas e venceu!\n");
+        return 1;
+    }
+
+    if(!GalinhaVidas(jogo.galinha)){
+        printf("Voce perdeu todas as vidas! Fim de jogo.\n");
+        return 1;
     }
 
     return 0;
