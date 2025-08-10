@@ -45,6 +45,12 @@ typedef struct{
 
 }tGalinha;
 tGalinha InicializaGalinha(tConfig config);
+tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_x);
+tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario);
+
+int GalinhaPosicao_y(tGalinha galinha);
+int GalinhaPontuacao(tGalinha galinha);
+int GalinhaVidas(tGalinha galinha);
 
 // Carro
 typedef struct{
@@ -54,6 +60,7 @@ typedef struct{
 
 }tCarro;
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
+void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, int velocidade, int limitePista);
 int CarroPosicao_x(tCarro carro);
 
 // Pista
@@ -70,6 +77,8 @@ typedef struct{
 }tPista;
 void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config);
 int CentroPistaPosicao_y(tPista pista);
+
+void AtualizaPistas(tPista pistas[], int qtdPistas, int largura);
 
 // Atropelamento
 typedef struct{
@@ -96,8 +105,13 @@ typedef struct{
 
 }tMapa;
 tMapa InicializaMapa(tConfig config);
+tMapa AtualizaMapa(tMapa mapa);
+
 tMapa DesenhaCenario(tMapa mapa);
+// 1 chamar desenhaMapa
+// 2 chamar ImprimeMapa
 void ImprimeMapa(tMapa mapa, FILE *saida);
+
 int CalculaPosicao_y(int ordemPistaCimaBaixo);
 int CalculaAlturaSemBorda(int qtdPistas);
 
@@ -119,6 +133,9 @@ typedef struct{
 }tJogo;
 
 tJogo InicializaJogo(int argc,char *argv[]);
+tJogo ExecutaJogo(tJogo jogo);
+tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
+
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
 void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
@@ -126,9 +143,17 @@ void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha);
 tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
 tMapa DesenhaMapa(tJogo jogo);
 
+void ImprimePlacar(tJogo jogo);
+
+char TerminalInput(tJogo jogo);
+
 int main(int argc, char *argv[]){
 
-    InicializaJogo(argc, argv);
+    tJogo jogo = InicializaJogo(argc, argv);
+
+    while(1){
+        jogo = ExecutaJogo(jogo);
+    }
 
     return 0;
 }
@@ -155,6 +180,49 @@ tGalinha InicializaGalinha(tConfig config){
     return galinha;
 }
 
+tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_y){
+    galinha.posicao_y = novaPosicao_y;
+    return galinha;
+}
+
+// Move a galinha se for possivel
+tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
+
+    if(respostaUsuario == 'w'){
+        int moveCima  = -3;
+        galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + moveCima));
+
+    }else if(respostaUsuario == 's'){
+        
+        if(galinha.posicao_y != galinha.posicaoInicial_y){
+            int moveBaixo = + 3;
+            galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + moveBaixo));
+
+        }else if(galinha.posicao_y == galinha.posicaoInicial_y){
+            int parada = 0;
+            galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + parada));
+        }
+
+    }else if(respostaUsuario == ' '){
+        int parada = 0;
+        galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + parada));
+    }
+
+    return galinha;
+}
+
+int GalinhaPosicao_y(tGalinha galinha){
+    return galinha.posicao_y;
+}
+
+int GalinhaPontuacao(tGalinha galinha){
+    return galinha.pontuacao;
+}
+
+int GalinhaVidas(tGalinha galinha){
+    return galinha.vidas;
+}
+
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
 {
 
@@ -162,6 +230,21 @@ void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
     for(i = 0; i < qtdCarros; i++){
         carros[i].id = (i+1);
         carros[i].posicao_x = posicoesCarros_x[i];
+    }
+}
+
+void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, int velocidade, int limitePista){
+
+    int i;
+    for(i = 0; i < qtdCarros; i++){
+
+        int deslocamento = Carros[i].posicao_x + velocidade;
+
+        if(deslocamento >= limitePista){
+            Carros[i].posicao_x = 1;
+        }else{
+            Carros[i].posicao_x = deslocamento;
+        }
     }
 }
 
@@ -334,6 +417,19 @@ int CentroPistaPosicao_y(tPista pista){
     return pista.centro_y;
 }
 
+void AtualizaPistas(tPista pistas[], int qtdPistas, int largura){
+
+    int i;
+    for(i = 0; i < qtdPistas; i++){
+        
+        if(pistas[i].qtdCarros){
+            int qtdCarros = pistas[i].qtdCarros;
+            int velocidade = pistas[i].velocidade;
+            AtualizaPosicaoCarros(pistas[i].carros, qtdCarros, velocidade, largura);
+        }
+    }
+}
+
 tMapa InicializaMapa(tConfig config)
 {
 
@@ -349,6 +445,12 @@ tMapa InicializaMapa(tConfig config)
 
     InicializaPistas(mapa.pistas, mapa.qtdPistas, config);
 
+    return mapa;
+}
+
+tMapa AtualizaMapa(tMapa mapa){
+
+    AtualizaPistas(mapa.pistas, mapa.qtdPistas, mapa.largura);
     return mapa;
 }
 
@@ -407,7 +509,7 @@ tMapa DesenhaCenario(tMapa mapa){
 // ou informe um diretorio com arquivo valido
 // simplificar quando tiver tempo a logica
 void ImprimeMapa(tMapa mapa, FILE *saida){
-
+    
     fprintf(saida,"|");
     int i;
     for(i = 0; i < mapa.largura; i ++){
@@ -438,7 +540,11 @@ void ImprimeMapa(tMapa mapa, FILE *saida){
     for(i = 0; i < mapa.largura; i++){
         fprintf(saida,"-");
     }
+
     fprintf(saida,"|");
+
+    if(saida == stdout)
+        printf("\n");
 }
 
 int CalculaPosicao_y(int ordemPistaCimaBaixo){
@@ -469,6 +575,32 @@ tJogo InicializaJogo(int argc, char *argv[])
     jogo.mapa = DesenhaMapa(jogo);
 
     CriaArquivoInicializacao(jogo.mapa, jogo.galinha);
+    ImprimePlacar(jogo);
+    ImprimeMapa(jogo.mapa, stdout);
+
+    return jogo;
+}
+
+tJogo ExecutaJogo(tJogo jogo){
+
+    char userResposta = TerminalInput(jogo);
+    if(userResposta != '0'){
+
+        ImprimePlacar(jogo);
+
+        jogo = AtualizaEntidades(jogo, userResposta);
+        jogo.mapa = DesenhaMapa(jogo);
+        
+        ImprimeMapa(jogo.mapa, stdout);
+    }
+
+    return jogo;
+}
+
+tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
+
+    jogo.galinha = MoveGalinha(jogo.galinha, inputUsuario);
+    jogo.mapa = AtualizaMapa(jogo.mapa);
 
     return jogo;
 }
@@ -545,10 +677,41 @@ tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa){
     return mapa;
 }
 
+// 1 chamar desenhaMapa
+// 2 chamar ImprimeMapa
 tMapa DesenhaMapa(tJogo jogo){
 
     jogo.mapa = DesenhaCenario(jogo.mapa);
     jogo.mapa = DesenhaPersonagensMapa(jogo.galinha, jogo.skin, jogo.mapa);
 
     return jogo.mapa;
+}
+
+void ImprimePlacar(tJogo jogo){
+
+    int pontos = GalinhaPontuacao(jogo.galinha);
+    int vidas = GalinhaVidas(jogo.galinha);
+
+    printf("Pontos: %d | Vidas: %d | Iteracoes: %d\n",pontos, vidas, jogo.iteracao);
+}
+
+// Le stdin
+// Retorna 'w','s' ou ' ' caso leia com sucesso
+// Retorna 0 para caracter invalido
+char TerminalInput(tJogo jogo){
+
+    char respostaUsuario;
+    scanf("%c",&respostaUsuario);
+
+    switch(respostaUsuario){
+
+        case 'w':
+        case 's':
+        case ' ':
+            return respostaUsuario;
+            break;
+        default:
+    }
+
+    return '0';
 }
