@@ -62,7 +62,7 @@ typedef struct{
 
 }tCarro;
 void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
-void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, int velocidade, int limitePista);
+void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, char direcao, int velocidade, int limitePista);
 int CarroPosicao_x(tCarro carro);
 int Carro_id(tCarro carro);
 
@@ -281,18 +281,26 @@ void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
     }
 }
 
-void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, int velocidade, int limitePista){
+void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, char direcao, int velocidade, int limitePista){
 
     int i;
     for(i = 0; i < qtdCarros; i++){
 
-        int deslocamento = Carros[i].posicao_x + velocidade;
+        int deslocamento;
 
-        if(deslocamento >= limitePista){
-            Carros[i].posicao_x = 1;
+        if(direcao == 'D'){
+            deslocamento = Carros[i].posicao_x + velocidade;
+            if(deslocamento > limitePista){
+                deslocamento = 1;
+            }
         }else{
-            Carros[i].posicao_x = deslocamento;
+            deslocamento = Carros[i].posicao_x - velocidade;
+            if(deslocamento < 1){
+                deslocamento = limitePista;
+            }
         }
+
+        Carros[i].posicao_x = deslocamento;
     }
 }
 
@@ -477,7 +485,7 @@ void AtualizaPistas(tPista pistas[], int qtdPistas, int largura){
         if(pistas[i].qtdCarros){
             int qtdCarros = pistas[i].qtdCarros;
             int velocidade = pistas[i].velocidade;
-            AtualizaPosicaoCarros(pistas[i].carros, qtdCarros, velocidade, largura);
+            AtualizaPosicaoCarros(pistas[i].carros, qtdCarros, pistas[i].direcao, velocidade, largura);
         }
     }
 }
