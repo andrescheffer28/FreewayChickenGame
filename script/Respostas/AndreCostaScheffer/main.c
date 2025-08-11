@@ -95,9 +95,11 @@ typedef struct{
     int galinha_y;
 
 }tAtropelamento;
-void InicializaAtropIteracao_id(tAtropelamento atropelamento[]);
+void InicializaAtropIteracaoCarr(tAtropelamento atropelamento[]);
 void RegistraAtropelamento( tAtropelamento atropelamento[], tPista pista, 
                             tGalinha galinha, int carro_id,int iteracao );
+int MinimaAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa);
+int MaxAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa);
 
 // Mapa
 typedef struct{
@@ -122,6 +124,7 @@ void ImprimeMapa(tMapa mapa, FILE *saida);
 
 int CalculaPosicao_y(int ordemPistaCimaBaixo);
 int CalculaAlturaSemBorda(int qtdPistas);
+int InverteAltura(int altura, int alturaTotal);
 
 // Jogo
 typedef struct{
@@ -136,20 +139,22 @@ typedef struct{
     int qtdAtropelamentos;
     tAtropelamento atropelamentos[100];
 
+    int ultimaIteracaoResumida;
+
     int heatmap[35][100];
 
 }tJogo;
 
-tJogo InicializaJogo(int argc,char *argv[]);
-tJogo ExecutaJogo(tJogo jogo);
+tJogo InicializaJogo(char *argv[]);
+tJogo ExecutaJogo(tJogo jogo, char *argv[]);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
-tJogo TerminaJogo(tJogo jogo, int condicoesFim);
+tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]);
 tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], int iteracao);
 
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
 void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
-void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha);
+void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]);
 tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
 tMapa DesenhaMapa(tJogo jogo);
 
@@ -160,19 +165,25 @@ int EstaColidindo(tPista pista, tGalinha galinha);
 int EhVitoria(tMapa mapa, tGalinha galinha);
 int FimDeJogo(tJogo jogo);
 
+void ApagaArquivosSaida(char *argv[]);
+void CriaEstatistaFile(tGalinha galinha, tAtropelamento atropelamentos[], tMapa mapa, char *argv[]);
+void ResumeRodadaArquivo(int iteracao, tAtropelamento atropelamentos[], char *argv[]);
+void EncerraResumo(int iteracao, char *argv[]);
+
 int main(int argc, char *argv[]){
 
-    tJogo jogo = InicializaJogo(argc, argv);
+    ApagaArquivosSaida(argv);
+
+    tJogo jogo = InicializaJogo(argv);
 
     int fimJogo = FimDeJogo(jogo);
     while(!fimJogo){
 
-        jogo = ExecutaJogo(jogo);
-
+        jogo = ExecutaJogo(jogo, argv);
         fimJogo = FimDeJogo(jogo);
     }
 
-    jogo = TerminaJogo(jogo, fimJogo);
+    jogo = TerminaJogo(jogo, fimJogo, argv);
 
     return 0;
 }
@@ -471,7 +482,7 @@ void AtualizaPistas(tPista pistas[], int qtdPistas, int largura){
     }
 }
 
-void InicializaAtropIteracao_id(tAtropelamento atropelamento[]){
+void InicializaAtropIteracaoCarr(tAtropelamento atropelamento[]){
 
     int i;
     for(i = 0; i < 90; i++){
@@ -496,6 +507,40 @@ void RegistraAtropelamento( tAtropelamento atropelamento[], tPista pista,
             break;
         }
     }
+}
+
+int MinimaAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa){
+
+    int alturaMinima = 100; 
+    int i;
+    for(i = 0; atropelamento[i].iteracao; i++){
+
+        int alturaAtual = InverteAltura(atropelamento[i].galinha_y, alturaMapa);
+        if(alturaMinima > alturaAtual){
+            alturaMinima = alturaAtual;
+        }
+    }
+
+    if(alturaMinima == 100){
+        return 0;
+    }
+
+    return alturaMinima;
+}
+
+int MaxAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa){
+
+    int alturaMax = 0; 
+    int i;
+    for(i = 0; atropelamento[i].iteracao; i++){
+
+        int alturaAtual = InverteAltura(atropelamento[i].galinha_y, alturaMapa);
+        if(alturaMax < alturaAtual){
+            alturaMax = alturaAtual;
+        }
+    }
+ 
+    return alturaMax;
 }
 
 tMapa InicializaMapa(tConfig config)
@@ -631,26 +676,35 @@ int CalculaAlturaSemBorda(int qtdPistas){
     return altura;
 }
 
-tJogo InicializaJogo(int argc, char *argv[])
-{
+// Ajusta para que a altura se escale conforme
+// se aproxima do topo
+int InverteAltura(int altura, int alturaTotal){
+
+    altura = alturaTotal - altura;
+
+    return altura;
+}
+
+tJogo InicializaJogo(char *argv[]){
 
     tJogo jogo;
 
+    jogo.ultimaIteracaoResumida = 0;
     jogo.config = LeConfiguracoes(argv);
     jogo.mapa = InicializaMapa(jogo.config);
     jogo.galinha = InicializaGalinha(jogo.config);
-    InicializaAtropIteracao_id(jogo.atropelamentos);
+    InicializaAtropIteracaoCarr(jogo.atropelamentos);
     jogo.skin = LeSkins(argv);
     jogo.mapa = DesenhaMapa(jogo);
 
-    CriaArquivoInicializacao(jogo.mapa, jogo.galinha);
+    CriaArquivoInicializacao(jogo.mapa, jogo.galinha, argv);
     ImprimePlacar(jogo);
     ImprimeMapa(jogo.mapa, stdout);
 
     return jogo;
 }
 
-tJogo ExecutaJogo(tJogo jogo){
+tJogo ExecutaJogo(tJogo jogo, char *argv[]){
 
     char userResposta = TerminalInput(jogo);
     if(userResposta != '0'){
@@ -662,6 +716,12 @@ tJogo ExecutaJogo(tJogo jogo){
         ImprimePlacar(jogo);
         jogo.mapa = DesenhaMapa(jogo);
         ImprimeMapa(jogo.mapa, stdout);
+    }
+
+    if(jogo.ultimaIteracaoResumida < jogo.iteracao){
+        jogo.ultimaIteracaoResumida = jogo.iteracao;
+
+        ResumeRodadaArquivo(jogo.iteracao, jogo.atropelamentos, argv);
     }
 
     return jogo;
@@ -680,12 +740,15 @@ tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
 // condicoesFim;
 // Retorna 1 - vitoria
 // Retorna 2 - sem vidas
-tJogo TerminaJogo(tJogo jogo, int condicoesFim){
+tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
 
     if(condicoesFim == 1){
         int qtdGanha = 10;
         jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanha);
     }
+
+    CriaEstatistaFile(jogo.galinha, jogo.atropelamentos, jogo.mapa, argv);
+    EncerraResumo(jogo.iteracao, argv);
 
     return jogo;
 }
@@ -769,9 +832,12 @@ void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const
     }
 }
 
-void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha){
+void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]){
 
-    FILE *saida = fopen("./saida/inicializacao.txt","w");
+    char diretorio[1020];
+    sprintf(diretorio,"%s/saida/inicializacao.txt",argv[1]);
+
+    FILE *saida = fopen(diretorio,"w");
     if(saida == NULL){
         printf("Nao foi possivel criar arquivo Inicializacao.txt na pasta saida\n");
         exit(1);
@@ -897,4 +963,82 @@ int FimDeJogo(tJogo jogo){
     }
 
     return 0;
+}
+
+// Limpa arquivos criados na saida q
+// serao abertos na forma de append
+void ApagaArquivosSaida(char *argv[]){
+
+    char diretorio[1020];
+    sprintf(diretorio, "%s/saida/resumo.txt", argv[1]);
+    remove(diretorio);
+
+    sprintf(diretorio, "%s/saida/saida.txt", argv[1]);
+    remove(diretorio);
+}
+
+void CriaEstatistaFile(tGalinha galinha, tAtropelamento atropelamentos[], tMapa mapa, char *argv[])
+{
+
+    char diretorio[1020];
+    sprintf(diretorio, "%s/saida/estatistica.txt", argv[1]);
+
+    FILE *pFile = fopen(diretorio,"w");
+    if(pFile == NULL){
+        printf("ERRO: nao foi possivel gerar arquivo de estatistica na pasta saida\n");
+        return;
+    }
+
+    int alturaMaxAting = InverteAltura(galinha.alturaMaxAtinginda, mapa.altura);
+    int alturaMaxAtrop = MaxAlturaAtropelada(atropelamentos, mapa.altura);
+    int alturaMinAtrop = MinimaAlturaAtropelada(atropelamentos, mapa.altura);
+
+    fprintf(pFile,"Numero total de movimentos: %d\n", galinha.qtdMovimentoTotal);
+    fprintf(pFile,"Altura maxima que a galinha chegou: %d\n", alturaMaxAting);
+    fprintf(pFile,"Altura maxima que a galinha foi atropelada: %d\n", alturaMaxAtrop);
+    fprintf(pFile,"Altura minima que a galinha foi atropelada: %d\n", alturaMinAtrop);
+    fprintf(pFile,"Numero de movimentos na direcao oposta: %d\n", galinha.qtdMovimentoBaixo);
+
+    fclose(pFile);
+}
+
+void ResumeRodadaArquivo(int iteracao, tAtropelamento atropelamentos[], char *argv[]){
+
+    int teveAtropelamento = 0;
+    int i;
+    for(i = 0; atropelamentos[i].iteracao; i++){
+
+        if(atropelamentos[i].iteracao == iteracao){
+            teveAtropelamento = 1;
+            break;
+        }
+    }
+
+    if(teveAtropelamento){
+
+        char diretorio[1020];
+        sprintf(diretorio,"%s/saida/resumo.txt",argv[1]);
+
+        FILE *pFile = fopen(diretorio,"a");
+        fprintf(pFile, "[%d] Na pista %d o carro %d atropelou a galinha na posicao (%d,%d).\n",
+                                                                                        atropelamentos[i].iteracao,
+                                                                                        atropelamentos[i].pista_id,
+                                                                                        atropelamentos[i].carro_id,
+                                                                                        atropelamentos[i].galinha_x,
+                                                                                        atropelamentos[i].galinha_y);
+    
+
+        fclose(pFile);
+    }
+
+}
+
+void EncerraResumo(int iteracao, char *argv[]){
+
+    char diretorio[1020];
+    sprintf(diretorio,"%s/saida/resumo.txt",argv[1]);
+
+    FILE *pFile = fopen(diretorio,"a");
+    fprintf(pFile, "[%d] Fim de jogo", iteracao);
+    fclose(pFile);
 }
