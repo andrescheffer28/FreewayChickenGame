@@ -143,6 +143,7 @@ typedef struct{
 tJogo InicializaJogo(int argc,char *argv[]);
 tJogo ExecutaJogo(tJogo jogo);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
+tJogo TerminaJogo(tJogo jogo, int condicoesFim);
 tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], int iteracao);
 
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
@@ -163,10 +164,15 @@ int main(int argc, char *argv[]){
 
     tJogo jogo = InicializaJogo(argc, argv);
 
-    while(!FimDeJogo(jogo)){
+    int fimJogo = FimDeJogo(jogo);
+    while(!fimJogo){
 
         jogo = ExecutaJogo(jogo);
+
+        fimJogo = FimDeJogo(jogo);
     }
+
+    jogo = TerminaJogo(jogo, fimJogo);
 
     return 0;
 }
@@ -671,6 +677,19 @@ tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
     return jogo;
 }
 
+// condicoesFim;
+// Retorna 1 - vitoria
+// Retorna 2 - sem vidas
+tJogo TerminaJogo(tJogo jogo, int condicoesFim){
+
+    if(condicoesFim == 1){
+        int qtdGanha = 10;
+        jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanha);
+    }
+
+    return jogo;
+}
+
 // verifica colisao, reseta a galinha caso haja
 // salva atropelamento na matriz de atropelamentos;
 // caso contrario, aumenta a pontuacao
@@ -859,6 +878,9 @@ int EhVitoria(tMapa mapa, tGalinha galinha){
     return 0;
 }
 
+// Retorna 0 - jogo n terminado
+// Retorna 1 - vitoria
+// Retorna 2 - sem vidas
 int FimDeJogo(tJogo jogo){
 
     if(EhVitoria(jogo.mapa, jogo.galinha)){
@@ -871,7 +893,7 @@ int FimDeJogo(tJogo jogo){
 
     if(!GalinhaVidas(jogo.galinha)){
         printf("Voce perdeu todas as vidas! Fim de jogo.\n");
-        return 1;
+        return 2;
     }
 
     return 0;
