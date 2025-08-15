@@ -2,24 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-// Le e armazena config inicial
-typedef struct{
-
-    int ehAnimado;
-    int larguraMapa;
-    int qtdPistas;
-    
-    //configPistas
-    char cfPistas[15][50];
-
-}tConfig;
-tConfig LeConfiguracoes(char *argv[]);
-void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite);
-void LinhaConfigPistasProcurada(tConfig config, char linhaCopia[], int limite, char keyLetra);
-int EhAnimado(tConfig config);
-int LarguraMapa(tConfig config);
-int QtdPistas(tConfig config);
-
 // Le e armazena skin personagens
 typedef struct{
 
@@ -45,7 +27,7 @@ typedef struct{
     int qtdMovimentoBaixo;
 
 }tGalinha;
-tGalinha InicializaGalinha(tConfig config);
+tGalinha InicializaGalinha(tGalinha galinha,int pistaGalinha_id, FILE *pFile);
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_x);
 tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario);
 tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha);
@@ -61,7 +43,7 @@ typedef struct{
     int posicao_x;
 
 }tCarro;
-void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[]);
+void InicializaCarros(tCarro carros[], int qtdCarros, FILE *pFile);
 void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, char direcao, int velocidade, int limitePista);
 int CarroPosicao_x(tCarro carro);
 int Carro_id(tCarro carro);
@@ -78,7 +60,7 @@ typedef struct{
     char direcao;
 
 }tPista;
-void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config);
+void InicializaPistas(tPista pistas[], int qtdPistas, FILE *pFile);
 int CentroPistaPosicao_y(tPista pista);
 
 void AtualizaPistas(tPista pistas[], int qtdPistas, int largura);
@@ -95,7 +77,7 @@ typedef struct{
     int galinha_y;
 
 }tAtropelamento;
-void InicializaAtropIteracaoCarr(tAtropelamento atropelamento[]);
+void InicializaAtropIteracao(tAtropelamento atropelamento[]);
 void RegistraAtropelamento( tAtropelamento atropelamento[], tPista pista, 
                             tGalinha galinha, int carro_id,int iteracao );
 int MinimaAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa);
@@ -114,8 +96,9 @@ typedef struct{
     char desenhoMapa[35][102];
 
 }tMapa;
-tMapa InicializaMapa(tConfig config);
+tMapa InicializaMapa(tMapa mapa, FILE *pFile);
 tMapa AtualizaMapa(tMapa mapa);
+int tMapa_qtdPistas(tMapa mapa);
 
 tMapa DesenhaCenario(tMapa mapa);
 // 1 chamar desenhaMapa
@@ -129,8 +112,8 @@ int InverteAltura(int altura, int alturaTotal);
 // Jogo
 typedef struct{
 
-    tConfig config;
     tSkin skin;
+    int ehAnimado;
 
     tGalinha galinha;
     tMapa mapa;
@@ -145,6 +128,7 @@ typedef struct{
 
 }tJogo;
 
+tJogo tJogo_LeConfiguracoes(tJogo jogo, char *argv[]);
 tJogo InicializaJogo(char *argv[]);
 tJogo ExecutaJogo(tJogo jogo, char *argv[]);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
@@ -154,7 +138,6 @@ tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamen
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
 void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
-//void CriaArquivoSaida(tMapa mapa, char *argv[]);
 void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]);
 tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
 tMapa DesenhaMapa(tJogo jogo);
@@ -190,25 +173,20 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-tGalinha InicializaGalinha(tConfig config){
+tGalinha InicializaGalinha(tGalinha galinha, int pistaGalinha_id, FILE *pFile){
 
-    tGalinha galinha;
+    fgetc(pFile);
+    fscanf(pFile,"%d %d",&galinha.posicaoInicial_x,&galinha.vidas);
 
-    char linhaConfigGalinha[10];
-    LinhaConfigPistasProcurada(config, linhaConfigGalinha, 10, 'G');
-
-    sscanf(linhaConfigGalinha, "%*c %d %d", &galinha.posicaoInicial_x,
-                                            &galinha.vidas);
-    int pistaGalinha = QtdPistas(config);
-    galinha.posicaoInicial_y = CalculaPosicao_y(pistaGalinha);
+    int pistaGalinha = pistaGalinha_id;
+    galinha.posicaoInicial_y = CalculaPosicao_y(pistaGalinha_id);
 
     galinha.posicao_x = galinha.posicaoInicial_x;
-
     galinha.posicao_y = galinha.posicaoInicial_y;
     galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
     galinha.alturaMaxAtinginda = galinha.posicaoInicial_y;
 
-    galinha.pistaInicial_id = QtdPistas(config);
+    galinha.pistaInicial_id = pistaGalinha_id;
     galinha.pontuacao = 0;
     galinha.qtdMovimentoTotal = 0;
     galinha.qtdMovimentoBaixo = 0;
@@ -273,14 +251,16 @@ int GalinhaVidas(tGalinha galinha){
     return galinha.vidas;
 }
 
-void InicializaCarros(tCarro carros[], int qtdCarros, int posicoesCarros_x[])
-{
+void InicializaCarros(tCarro carros[], int qtdCarros, FILE *pFile){
 
     int i;
     for(i = 0; i < qtdCarros; i++){
         carros[i].id = (i+1);
-        carros[i].posicao_x = posicoesCarros_x[i];
+        fscanf(pFile, "%d",&carros[i].posicao_x);
     }
+
+    // fim de linha
+    fgetc(pFile);
 }
 
 void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, char direcao, int velocidade, int limitePista){
@@ -314,79 +294,6 @@ int Carro_id(tCarro carro){
     return carro.id;
 }
 
-tConfig LeConfiguracoes(char *argv[]){
-
-    tConfig config;
-
-    char diretorio[1025];
-    sprintf(diretorio,"%s/config_inicial.txt",argv[1]);
-    FILE *pfile = fopen(diretorio,"r");
-
-    if(pfile == NULL){
-        printf("ERRO: Informe o argv com os arquivos de configuracao.\n");
-        exit(1);
-    }
-
-    char linha[50];
-
-    if(fgets(linha,50,pfile) == NULL){
-        printf("Nao foi possivel ler 1nd linha arq Config\n");
-        fclose(pfile);
-        exit(1);
-    }
-    sscanf(linha,"%d",&config.ehAnimado);
-
-    if(fgets(linha,50,pfile) == NULL){
-        printf("Nao foi possivel ler 2nd linha arq Config\n");
-        fclose(pfile);
-        exit(1);
-    }
-    sscanf(linha,"%d %d",&config.larguraMapa,&config.qtdPistas);
-
-// Leitura das config de Pistas
-    int i;
-    for(i = 0; fgets(linha,50,pfile) != NULL; i++){
-
-        sprintf(config.cfPistas[i],"%s",linha);
-    }
-
-
-    fclose(pfile);
-
-    return config;
-}
-
-void CopiaLinhaConfigPistas(tConfig config, char copia[], int posicaoLinha, int limite){
-
-    strncpy(copia, config.cfPistas[posicaoLinha], (limite-1));
-    copia[limite-1] = '\0';
-}
-
-void LinhaConfigPistasProcurada(tConfig config, char linhaCopia[], int limite, char keyLetra){
-
-    int i;
-    for(i = 0; i < config.qtdPistas; i++){
-
-        if(config.cfPistas[i][0] == keyLetra){
-            strncpy(linhaCopia, config.cfPistas[i], (limite-1));
-            linhaCopia[limite-1] = '\0';
-            break;
-        }
-    }
-}
-
-int EhAnimado(tConfig config){
-    return config.ehAnimado;
-}
-
-int LarguraMapa(tConfig config){
-    return config.larguraMapa;
-}
-
-int QtdPistas(tConfig config){
-    return config.qtdPistas;
-}
-
 tSkin LeSkins(char *argv[]){
 
     tSkin skin;
@@ -400,25 +307,36 @@ tSkin LeSkins(char *argv[]){
         exit(1);
     }
 
-    char ch[50];
-    fgets(ch,50,pfile);
-    strncpy(skin.galinha, ch, 3);
+    char ch;
+    int i;
+    for(i = 0; i < 6; i++){
 
-    fgets(ch,50,pfile);
-    strncpy(skin.galinha + 3, ch, 3);
+        fscanf(pfile,"%c",&ch);
 
+        if(ch == '\n'){
+            i--;
+            continue;
+        }
+
+        skin.galinha[i] = ch;
+    }
     skin.galinha[6] = '\0';
 
-    int i;
-    for(i = 0; i < 4 ; i++){
+    for(i = 0; i < 24; i++){
 
-        int offset = i*6;
+        fscanf(pfile,"%c",&ch);
 
-        fgets(ch,50,pfile);
-        strncpy(skin.carro + offset, ch, 3);
+        if(ch == ' ' && !i){
+            i--;
+            continue;
+        }
 
-        fgets(ch,50,pfile);
-        strncpy(skin.carro + offset + 3, ch, 3);
+        if(ch == '\n'){
+            i--;
+            continue;
+        }
+
+        skin.carro[i] = ch;
     }
     skin.carro[24] = '\0';
 
@@ -426,26 +344,15 @@ tSkin LeSkins(char *argv[]){
     return skin;
 }
 
-void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
-{
-
-    char configPista[52];
+void InicializaPistas(tPista pistas[], int qtdPistas, FILE *pFile){
 
     int i;
-    for(i = 0; i < qtdPistas; i++){
+    int tirandoGalinha = qtdPistas-1;
+    for(i = 0; i < tirandoGalinha; i++){
+        char tipoPista;
+        fscanf(pFile,"%c",&tipoPista);
 
-        CopiaLinhaConfigPistas(config, configPista, i, 52);
-
-        if(configPista[0] == '\n'){
-            pistas[i].id = (i+1);
-            pistas[i].qtdCarros = 0;
-            pistas[i].velocidade = 0;
-            pistas[i].direcao = '0';
-            pistas[i].centro_y = i*3 + 1;
-            continue;
-        }
-
-        if(configPista[0]  == 'G'){
+        if(tipoPista == '\n'){
             pistas[i].id = (i+1);
             pistas[i].qtdCarros = 0;
             pistas[i].velocidade = 0;
@@ -455,24 +362,19 @@ void InicializaPistas(tPista pistas[], int qtdPistas, tConfig config)
         }
 
         pistas[i].id = (i+1);
+        fscanf(pFile,"%d %d",   &pistas[i].velocidade,
+                                &pistas[i].qtdCarros);
+        pistas[i].direcao = tipoPista;
         pistas[i].centro_y = i*3 + 1;
-
-        int offset = 0;
-        sscanf(configPista,"%c %d %d %n",  &pistas[i].direcao, 
-                                            &pistas[i].velocidade, 
-                                            &pistas[i].qtdCarros,
-                                            &offset);
-        
-        int posicoesCarros_x[11];
-        int j;
-        for(j = 0; j < pistas[i].qtdCarros; j++){
-            int qtdLida = 0;
-            sscanf(configPista + offset, "%d %n",&posicoesCarros_x[j],&qtdLida);
-            offset = offset + qtdLida;
-        }
-
-        InicializaCarros(pistas[i].carros, pistas[i].qtdCarros, posicoesCarros_x);
+        InicializaCarros(pistas[i].carros, pistas[i].qtdCarros, pFile);
     }
+
+    // Inicializa Pista Galinha
+    pistas[i].id = (i+1);
+    pistas[i].qtdCarros = 0;
+    pistas[i].velocidade = 0;
+    pistas[i].direcao = '0';
+    pistas[i].centro_y = i*3 + 1;
 }
 
 int CentroPistaPosicao_y(tPista pista){
@@ -492,7 +394,7 @@ void AtualizaPistas(tPista pistas[], int qtdPistas, int largura){
     }
 }
 
-void InicializaAtropIteracaoCarr(tAtropelamento atropelamento[]){
+void InicializaAtropIteracao(tAtropelamento atropelamento[]){
 
     int i;
     for(i = 0; i < 90; i++){
@@ -553,20 +455,18 @@ int MaxAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa){
     return alturaMax;
 }
 
-tMapa InicializaMapa(tConfig config)
-{
+tMapa InicializaMapa(tMapa mapa, FILE *pFile){
 
-    tMapa mapa;
-
-    mapa.largura = LarguraMapa(config);
-    mapa.qtdPistas = QtdPistas(config);
+    fscanf(pFile, "%d %d",&mapa.largura,&mapa.qtdPistas);
+    // fim de linha
+    fgetc(pFile);
 
     // Desconsidera as bordas
     // 2 linhas em branco + 1 linha padrao, por pista
     //mapa.altura = mapa.qtdPistas*2 + mapa.qtdPistas;
     mapa.altura = CalculaAlturaSemBorda(mapa.qtdPistas);
 
-    InicializaPistas(mapa.pistas, mapa.qtdPistas, config);
+    InicializaPistas(mapa.pistas, mapa.qtdPistas, pFile);
 
     return mapa;
 }
@@ -575,6 +475,10 @@ tMapa AtualizaMapa(tMapa mapa){
 
     AtualizaPistas(mapa.pistas, mapa.qtdPistas, mapa.largura);
     return mapa;
+}
+
+int tMapa_qtdPistas(tMapa mapa){
+    return mapa.qtdPistas;
 }
 
 // qtd de linhas totais - inclui bordas
@@ -695,21 +599,39 @@ int InverteAltura(int altura, int alturaTotal){
     return altura;
 }
 
+tJogo tJogo_LeConfiguracoes(tJogo jogo, char *argv[]){
+
+    char diretorio[1020];
+    sprintf(diretorio,"%s/config_inicial.txt",argv[1]);
+
+    FILE *pFile = fopen(diretorio,"r");
+    if(pFile == NULL){
+        printf("ERRO: Informe o argv com os arquivos de configuracao.\n");
+        exit(1);
+    }
+
+    fscanf(pFile,"%d",&jogo.ehAnimado);
+    jogo.mapa = InicializaMapa(jogo.mapa, pFile);
+    jogo.galinha = InicializaGalinha(jogo.galinha, tMapa_qtdPistas(jogo.mapa), pFile);
+
+    fclose(pFile);
+
+    return jogo;
+}
+
 tJogo InicializaJogo(char *argv[]){
 
     tJogo jogo;
 
     jogo.ultimaIteracaoResumida = 0;
-    jogo.config = LeConfiguracoes(argv);
-    jogo.mapa = InicializaMapa(jogo.config);
-    jogo.galinha = InicializaGalinha(jogo.config);
-    InicializaAtropIteracaoCarr(jogo.atropelamentos);
+    jogo = tJogo_LeConfiguracoes(jogo, argv);
+    InicializaAtropIteracao(jogo.atropelamentos);
     jogo.skin = LeSkins(argv);
     jogo.mapa = DesenhaMapa(jogo);
 
     CriaArquivoInicializacao(jogo.mapa, jogo.galinha, argv);
     ImprimePlacar(jogo);
-    ImprimeMapa(jogo.mapa, stdout);
+    ImprimeMapa(jogo.mapa,stdout);
 
     return jogo;
 }
@@ -725,7 +647,7 @@ tJogo ExecutaJogo(tJogo jogo, char *argv[]){
 
         ImprimePlacar(jogo);
         jogo.mapa = DesenhaMapa(jogo);
-        ImprimeMapa(jogo.mapa, stdout);
+        ImprimeMapa(jogo.mapa,stdout);
     }
 
     if(jogo.ultimaIteracaoResumida < jogo.iteracao){
