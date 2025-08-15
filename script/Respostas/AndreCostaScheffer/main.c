@@ -175,7 +175,9 @@ int main(int argc, char *argv[]){
 
 tGalinha InicializaGalinha(tGalinha galinha, int pistaGalinha_id, FILE *pFile){
 
-    fgetc(pFile);
+    char ch;
+    while(fscanf(pFile,"%c",&ch) == 1 && ch != 'G');
+    //fgetc(pFile);
     fscanf(pFile,"%d %d",&galinha.posicaoInicial_x,&galinha.vidas);
 
     int pistaGalinha = pistaGalinha_id;
@@ -260,6 +262,9 @@ void InicializaCarros(tCarro carros[], int qtdCarros, FILE *pFile){
     }
 
     // fim de linha
+    char ch;
+    fscanf(pFile,"%c",&ch);
+    if(ch == ' ')
     fgetc(pFile);
 }
 
@@ -272,14 +277,18 @@ void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, char direcao, int vel
 
         if(direcao == 'D'){
             deslocamento = Carros[i].posicao_x + velocidade;
+            deslocamento = (deslocamento%limitePista + limitePista)%limitePista;
+            /*
             if(deslocamento > limitePista){
                 deslocamento = 1;
-            }
+            }*/
         }else{
             deslocamento = Carros[i].posicao_x - velocidade;
+            deslocamento = (deslocamento%limitePista + limitePista)%limitePista;
+            /*
             if(deslocamento < 1){
                 deslocamento = limitePista;
-            }
+            }*/
         }
 
         Carros[i].posicao_x = deslocamento;
