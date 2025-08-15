@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/a.out",
-            "args": ["/home/kinecop-ubuntu/engcomp/trabalhoProg1/trabalho_prog1-v1/script/Casos/1"],
+            "args": ["/home/kinecop-ubuntu/engcomp/trabalhoProg1/trabalho_prog1-v1editado/script/Casos/6"],
             "stopAtEntry": true,
             "cwd": "${fileDirname}",
             "environment": [],

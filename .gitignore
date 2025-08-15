@@ -1,7 +1,12 @@
 fazdiff.sh
+/script/Resultados/
+/script/Casos/
 /script/Respostas/AndreCostaScheffer/saida/
 estrutura e funcoes do trabalho.odt
 JogoDaVelhaModeloDeCodigo.c
 *.out
 *.odt#
 tFun
+log.txt
+Resultado.csv
+saida.json
