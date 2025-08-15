@@ -154,6 +154,7 @@ tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamen
 void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
 void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
+//void CriaArquivoSaida(tMapa mapa, char *argv[]);
 void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]);
 tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
 tMapa DesenhaMapa(tJogo jogo);
@@ -183,6 +184,7 @@ int main(int argc, char *argv[]){
         fimJogo = FimDeJogo(jogo);
     }
 
+    // talvez somar 11
     jogo = TerminaJogo(jogo, fimJogo, argv);
 
     return 0;
