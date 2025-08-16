@@ -1148,13 +1148,4 @@ void tJogo_RegistroAtropelamentoHeatmap(int heatmap[][100], tGalinha galinha, tM
             heatmap[i][j] = -1;
         }
     }
-
-    /*
-    heatmap[centro_y][esquerda_x] = -1;
-    heatmap[centro_y][centro_x] = -1;
-    heatmap[centro_y][direita_x]  = -1;
-
-    heatmap[centro_y + 1][esquerda_x] = -1;
-    heatmap[centro_y + 1][centro_x]  = -1;
-    heatmap[centro_y + 1][direita_x]  = -1;*/
 }
