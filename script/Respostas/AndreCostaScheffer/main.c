@@ -19,6 +19,7 @@ typedef struct{
     int posicaoInicial_x;
     int posicaoInicial_y;
     int pistaInicial_id;
+    int alturaAnterior;
     int alturaMaxVidaAtual;
     int alturaMaxAtinginda;
     int vidas;
@@ -28,6 +29,7 @@ typedef struct{
 
 }tGalinha;
 tGalinha InicializaGalinha(tGalinha galinha,int pistaGalinha_id, FILE *pFile);
+tGalinha tGalinha_reseta(tGalinha galinha);
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_x);
 tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario);
 tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha);
@@ -177,11 +179,11 @@ tGalinha InicializaGalinha(tGalinha galinha, int pistaGalinha_id, FILE *pFile){
     //fgetc(pFile);
     fscanf(pFile,"%d %d",&galinha.posicaoInicial_x,&galinha.vidas);
 
-    int pistaGalinha = pistaGalinha_id;
     galinha.posicaoInicial_y = CalculaPosicao_y(pistaGalinha_id);
 
     galinha.posicao_x = galinha.posicaoInicial_x;
     galinha.posicao_y = galinha.posicaoInicial_y;
+    galinha.alturaAnterior = galinha.posicaoInicial_y;
     galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
     galinha.alturaMaxAtinginda = galinha.posicaoInicial_y;
 
@@ -206,6 +208,8 @@ tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_y){
 
 // Move a galinha se for possivel
 tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
+
+    galinha.alturaAnterior = galinha.posicao_y;
 
     if(respostaUsuario == 'w'){
         int moveCima  = -3;
@@ -718,19 +722,18 @@ tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamen
             if(carro_id){
 
                 RegistraAtropelamento(atropleamentos, mapa.pistas[i], galinha, carro_id, iteracao);
-
-                galinha.vidas--;
-                galinha.pontuacao = 0;
-                galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
-                galinha.posicao_y = galinha.posicaoInicial_y;
+                galinha = tGalinha_reseta(galinha);
 
                 return galinha;
             }else{
 
-                if(galinha.posicao_y < galinha.alturaMaxVidaAtual){
-
-                    galinha.alturaMaxVidaAtual = galinha.posicao_y;
+                if(galinha.posicao_y < galinha.alturaAnterior){
+                    galinha.alturaAnterior = galinha.posicao_y;
                     galinha.pontuacao++;
+                }
+
+                if(galinha.posicao_y < galinha.alturaMaxVidaAtual){
+                    galinha.alturaMaxVidaAtual = galinha.posicao_y;
                 }
 
                 return galinha;
@@ -977,4 +980,15 @@ void EncerraResumo(int iteracao, char *argv[]){
     FILE *pFile = fopen(diretorio,"a");
     fprintf(pFile, "[%d] Fim de jogo", iteracao);
     fclose(pFile);
+}
+
+tGalinha tGalinha_reseta(tGalinha galinha){
+
+    galinha.vidas--;
+    galinha.pontuacao = 0;
+    galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
+    galinha.alturaAnterior = 0;
+    galinha.posicao_y = galinha.posicaoInicial_y;
+
+    return galinha;
 }
