@@ -138,13 +138,14 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]);
 tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], 
                                         int heatmap[][100] , int iteracao);
 
+int InicioSkinAnimacao(int iteracao, int ehAnimado);
 void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centro_y, 
-                                int larguraMapa, const char skin[], int inicioSkinMatriz);
+                                int larguraMapa, char skin[], int inicioSkin);
 
-void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
-void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
+void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, char skinGalinha[]);
+void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, char skinCarro[], int iteracao, int ehAnimado);
 void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]);
-tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa);
+tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa, int iteracao, int ehAnimado);
 tMapa DesenhaMapa(tJogo jogo);
 
 void ImprimePlacar(tJogo jogo);
@@ -757,8 +758,9 @@ tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelam
 
 // se for do tipo 2altura x 3 largura
 void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centro_y, 
-                                int larguraMapa, const char skin[], int inicioSkinMatriz){
-    int j = inicioSkinMatriz;
+                                int larguraMapa, char skin[], int incioSkin){
+    int j = incioSkin;
+
     int centroMatriz_x = centro_x - 1;
     int cabecaCentro_y = centro_y - 1;
 
@@ -779,21 +781,21 @@ void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centr
     desenhoMapa[corpoCentro_y][direita_x] = skin[j+5];
 }
 
-void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]){
+void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, char skinGalinha[]){
 
-    int inicioSkinMatriz = 0;
-    DesenhaQualquerEntidade(desenhoMapa, galinha.posicao_x, galinha.posicao_y, larguraMapa, skinGalinha, inicioSkinMatriz);
+    int inicioSkin = 0;
+    DesenhaQualquerEntidade(desenhoMapa, galinha.posicao_x, galinha.posicao_y, larguraMapa, skinGalinha, inicioSkin);
 }
 
-void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]){
+void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, char skinCarro[], int iteracao, int ehAnimado){
 
     int i;
     for(i = 0; i < pista.qtdCarros; i++){
 
         int posicao_x = CarroPosicao_x(pista.carros[i]);
         int posicao_y = pista.centro_y;
-        int inicioSkinMatriz = 0;
-        DesenhaQualquerEntidade(desenhoMapa, posicao_x, posicao_y, larguraMapa, skinCarro, inicioSkinMatriz);
+        int inicioSkin = InicioSkinAnimacao(iteracao, ehAnimado);
+        DesenhaQualquerEntidade(desenhoMapa, posicao_x, posicao_y, larguraMapa, skinCarro, inicioSkin);
     }
 }
 
@@ -816,7 +818,7 @@ void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]){
     fclose(saida);
 }
 
-tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa){
+tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa, int iteracao, int ehAnimado){
 
     int i;
     for(i = 0; i < mapa.qtdPistas; i++){
@@ -826,7 +828,7 @@ tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa){
             DesenhaGalinha(mapa.desenhoMapa, mapa.largura, galinha, skins.galinha);
         }
 
-        DesenhaCarros(mapa.desenhoMapa, mapa.largura, mapa.pistas[i], skins.carro);
+        DesenhaCarros(mapa.desenhoMapa, mapa.largura, mapa.pistas[i], skins.carro, iteracao, ehAnimado);
     }
     return mapa;
 }
@@ -836,7 +838,7 @@ tMapa DesenhaPersonagensMapa(tGalinha galinha, tSkin skins, tMapa mapa){
 tMapa DesenhaMapa(tJogo jogo){
 
     jogo.mapa = DesenhaCenario(jogo.mapa);
-    jogo.mapa = DesenhaPersonagensMapa(jogo.galinha, jogo.skin, jogo.mapa);
+    jogo.mapa = DesenhaPersonagensMapa(jogo.galinha, jogo.skin, jogo.mapa, jogo.iteracao, jogo.ehAnimado);
 
     return jogo.mapa;
 }
@@ -1106,7 +1108,6 @@ void CriaHeatmapFile(int heatmap[][100], tMapa mapa, char *argv[]){
         }
         fprintf(pfile,"\n");
     }
-
     fclose(pfile);
 }
 
@@ -1133,13 +1134,8 @@ void tJogo_RegistroNormalHeatmap(int heatmap[][100], tGalinha galinha){
 }
 
 void tJogo_RegistroAtropelamentoHeatmap(int heatmap[][100], tGalinha galinha, tMapa mapa){
-
-    int centro_x = galinha.posicao_x - 1;
-    int esquerda_x = (centro_x - 1);
-    int direita_x = (centro_x + 1);
-
+    
     int centro_y = galinha.posicao_y - 1;
-
     int i;
     for(i = centro_y; i <= (centro_y + 1); i++){
 
@@ -1148,4 +1144,16 @@ void tJogo_RegistroAtropelamentoHeatmap(int heatmap[][100], tGalinha galinha, tM
             heatmap[i][j] = -1;
         }
     }
+}
+
+int InicioSkinAnimacao(int iteracao, int ehAnimado){
+
+    int skinInicio = 0;
+
+    if(ehAnimado){
+        int skin_id = iteracao%4;
+        skinInicio = skin_id * 6; 
+    }
+
+    return skinInicio;
 }
