@@ -149,14 +149,11 @@ int EstaColidindo(tPista pista, tGalinha galinha);
 int EhVitoria(tMapa mapa, tGalinha galinha);
 int FimDeJogo(tJogo jogo);
 
-void ApagaArquivosSaida(char *argv[]);
 void CriaEstatistaFile(tGalinha galinha, tAtropelamento atropelamentos[], tMapa mapa, char *argv[]);
 void ResumeRodadaArquivo(int iteracao, tAtropelamento atropelamentos[], char *argv[]);
 void EncerraResumo(int iteracao, char *argv[]);
 
 int main(int argc, char *argv[]){
-
-    ApagaArquivosSaida(argv);
 
     tJogo jogo = InicializaJogo(argv);
 
@@ -237,7 +234,7 @@ tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
 }
 
 tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha){
-    galinha.pontuacao += 10;  
+    galinha.pontuacao += qtdGanha;  
     return galinha;
 }
 
@@ -653,10 +650,12 @@ tJogo ExecutaJogo(tJogo jogo, char *argv[]){
         jogo.iteracao++;
 
         jogo = AtualizaEntidades(jogo, userResposta);
-
-        ImprimePlacar(jogo);
         jogo.mapa = DesenhaMapa(jogo);
-        ImprimeMapa(jogo.mapa,stdout);
+
+        if(!FimDeJogo(jogo)){
+            ImprimePlacar(jogo);
+            ImprimeMapa(jogo.mapa,stdout);  
+        }
     }
 
     if(jogo.ultimaIteracaoResumida < jogo.iteracao){
@@ -686,6 +685,16 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
     if(condicoesFim == 1){
         int qtdGanha = 10;
         jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanha);
+    }
+
+    ImprimePlacar(jogo);
+    ImprimeMapa(jogo.mapa,stdout);  
+
+    if(condicoesFim == 1){
+        printf("Parabens! Voce atravessou todas as pistas e venceu!\n");
+
+    }else if(condicoesFim == 2){
+        printf("Voce perdeu todas as vidas! Fim de jogo.\n");
     }
 
     CriaEstatistaFile(jogo.galinha, jogo.atropelamentos, jogo.mapa, argv);
@@ -894,28 +903,14 @@ int FimDeJogo(tJogo jogo){
 
         int qtdGanhaPts = 10;
         jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanhaPts);
-        printf("Parabens! Voce atravessou todas as pistas e venceu!\n");
         return 1;
     }
 
     if(!GalinhaVidas(jogo.galinha)){
-        printf("Voce perdeu todas as vidas! Fim de jogo.\n");
         return 2;
     }
 
     return 0;
-}
-
-// Limpa arquivos criados na saida q
-// serao abertos na forma de append
-void ApagaArquivosSaida(char *argv[]){
-
-    char diretorio[1020];
-    sprintf(diretorio, "%s/saida/resumo.txt", argv[1]);
-    remove(diretorio);
-
-    sprintf(diretorio, "%s/saida/saida.txt", argv[1]);
-    remove(diretorio);
 }
 
 void CriaEstatistaFile(tGalinha galinha, tAtropelamento atropelamentos[], tMapa mapa, char *argv[])
