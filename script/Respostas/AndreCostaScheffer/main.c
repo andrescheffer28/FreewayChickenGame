@@ -81,6 +81,7 @@ typedef struct{
 void InicializaAtropIteracao(tAtropelamento atropelamento[]);
 void RegistraAtropelamento( tAtropelamento atropelamento[], tPista pista, 
                             tGalinha galinha, int carro_id,int iteracao );
+void tAtropelamento_sorting(tAtropelamento atropelamentos[]);
 int MinimaAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa);
 int MaxAlturaAtropelada(tAtropelamento atropelamento[], int alturaMapa);
 
@@ -153,6 +154,7 @@ int FimDeJogo(tJogo jogo);
 void CriaEstatistaFile(tGalinha galinha, tAtropelamento atropelamentos[], tMapa mapa, char *argv[]);
 void ResumeRodadaArquivo(int iteracao, tAtropelamento atropelamentos[], char *argv[]);
 void EncerraResumo(int iteracao, char *argv[]);
+void CriaRankingFile(tAtropelamento atropelamentos[], char *argv[]);
 
 int main(int argc, char *argv[]){
 
@@ -689,6 +691,7 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
     }
 
     CriaEstatistaFile(jogo.galinha, jogo.atropelamentos, jogo.mapa, argv);
+    CriaRankingFile(jogo.atropelamentos,argv);
     EncerraResumo(jogo.iteracao, argv);
 
     return jogo;
@@ -977,4 +980,66 @@ tGalinha tGalinha_reseta(tGalinha galinha){
     galinha.posicao_y = galinha.posicaoInicial_y;
 
     return galinha;
+}
+
+void CriaRankingFile(tAtropelamento atropelamentos[], char *argv[]){
+
+    char diretorio[1020];
+    sprintf(diretorio,"%s/saida/ranking.txt",argv[1]);
+
+    FILE *pfile = fopen(diretorio,"w");
+    if(pfile == NULL){
+        printf("Nao foi possivel criar o arquivo ranking.txt na pasta saida\n");
+        fclose(pfile);
+    }
+    fprintf(pfile,"id_pista,id_carro,iteracao\n");
+
+    tAtropelamento_sorting(atropelamentos);
+    int i;
+    for(i = 0; atropelamentos[i].iteracao; i++){
+
+        fprintf(pfile,"%d,%d,%d\n", atropelamentos[i].pista_id,
+                                    atropelamentos[i].carro_id,
+                                    atropelamentos[i].iteracao);
+    }
+
+    fclose(pfile);
+}
+
+void tAtropelamento_sorting(tAtropelamento atropelamentos[]){
+
+    int estaOrganizado = 0;
+    int i;
+    while(!estaOrganizado){
+
+        estaOrganizado = 1;
+        for(i = 1; atropelamentos[i].iteracao; i++){
+
+            tAtropelamento aux;
+            if(atropelamentos[i-1].pista_id > atropelamentos[i].pista_id){
+                aux = atropelamentos[i];
+                atropelamentos[i] = atropelamentos[i-1];
+                atropelamentos[i-1] = aux;
+                estaOrganizado = 0;
+
+            }else if(atropelamentos[i-1].pista_id == atropelamentos[i].pista_id){
+
+                if(atropelamentos[i-1].carro_id > atropelamentos[i].carro_id){
+                    aux = atropelamentos[i];
+                    atropelamentos[i] = atropelamentos[i-1];
+                    atropelamentos[i-1] = aux;
+                    estaOrganizado = 0;
+
+                }else if(atropelamentos[i-1].carro_id == atropelamentos[i].carro_id){
+                        if(atropelamentos[i-1].iteracao < atropelamentos[i].iteracao){
+                        aux = atropelamentos[i];
+                        atropelamentos[i] = atropelamentos[i-1];
+                        atropelamentos[i-1] = aux;
+                        estaOrganizado = 0;
+                    }
+                }
+            }
+        }
+    }
+
 }
