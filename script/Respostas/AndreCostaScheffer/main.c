@@ -31,7 +31,8 @@ tGalinha InicializaGalinha(tGalinha galinha,int pistaGalinha_id, FILE *pFile);
 tGalinha tGalinha_reseta(tGalinha galinha);
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_x);
 tGalinha MoveGalinha(tGalinha galinha, int heatmap[][100], char respostaUsuario);
-tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha);
+tGalinha tGalinha_AtualizaPontuacaoEAltura(tGalinha galinha);
+tGalinha tGalinha_AtualizaPontuacao(tGalinha galinha, int qtdGanha);
 
 int GalinhaPosicao_y(tGalinha galinha);
 int GalinhaPontuacao(tGalinha galinha);
@@ -65,6 +66,7 @@ void InicializaPistas(tPista pistas[], int qtdPistas, FILE *pFile);
 int CentroPistaPosicao_y(tPista pista);
 
 void AtualizaPistas(tPista pistas[], int qtdPistas, int largura);
+tPista tPista_ReduzVelocidade(tPista pista, int ehAnimado);
 
 // Atropelamento;
 // usar iteracao como busca pra
@@ -100,6 +102,10 @@ typedef struct{
 }tMapa;
 tMapa InicializaMapa(tMapa mapa, FILE *pFile);
 tMapa AtualizaMapa(tMapa mapa);
+tMapa tMapa_ReduzVelocidadePista(tMapa mapa, int indicePista, int ehAnimado);
+tPista tMapa_RetornaPista(tMapa mapa, int indicePista);
+int tMapa_VerificaPistaColisao(tMapa mapa, int indicePista, tGalinha galinha);
+int tMapa_RetornaCentroPista_y(tMapa mapa, int pistaIndice);
 int tMapa_qtdPistas(tMapa mapa);
 
 tMapa DesenhaCenario(tMapa mapa);
@@ -135,8 +141,9 @@ tJogo InicializaJogo(char *argv[]);
 tJogo ExecutaJogo(tJogo jogo, char *argv[]);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
 tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]);
-tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], 
-                                        int heatmap[][100] , int iteracao);
+tJogo tJogo_ProcessaAtropelamento(tJogo jogo);
+tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropelamentos[], 
+                                        int heatmap[][100] , int iteracao, int ehAnimado);
 
 int InicioSkinAnimacao(int iteracao, int ehAnimado);
 void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centro_y, 
@@ -176,7 +183,6 @@ int main(int argc, char *argv[]){
         fimJogo = FimDeJogo(jogo);
     }
 
-    // talvez somar 11
     jogo = TerminaJogo(jogo, fimJogo, argv);
 
     return 0;
@@ -242,7 +248,24 @@ tGalinha MoveGalinha(tGalinha galinha, int heatmap[][100], char respostaUsuario)
     return galinha;
 }
 
-tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha){
+// incrementa pontuacao da galinha caso avance pista,
+// atualiza altura maxima atinginda
+tGalinha tGalinha_AtualizaPontuacaoEAltura(tGalinha galinha){
+
+    if(galinha.posicao_y < galinha.alturaAnterior){
+        galinha.alturaAnterior = galinha.posicao_y;
+        galinha.pontuacao++;
+    }
+
+    if(galinha.alturaMaxAtinginda > galinha.posicao_y){
+        galinha.alturaMaxAtinginda = galinha.posicao_y;
+    }
+
+    return galinha;
+}
+
+tGalinha tGalinha_AtualizaPontuacao(tGalinha galinha, int qtdGanha)
+{
     galinha.pontuacao += qtdGanha;  
     return galinha;
 }
@@ -659,6 +682,8 @@ tJogo ExecutaJogo(tJogo jogo, char *argv[]){
         jogo.iteracao++;
 
         jogo = AtualizaEntidades(jogo, userResposta);
+        jogo = tJogo_ProcessaAtropelamento(jogo);
+
         jogo.mapa = DesenhaMapa(jogo);
 
         if(!FimDeJogo(jogo)){
@@ -667,6 +692,8 @@ tJogo ExecutaJogo(tJogo jogo, char *argv[]){
         }
     }
 
+    // adiciona resumo da rodada atual se ja nao tiver
+    // sido feito
     if(jogo.ultimaIteracaoResumida < jogo.iteracao){
         jogo.ultimaIteracaoResumida = jogo.iteracao;
 
@@ -681,9 +708,6 @@ tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
     jogo.galinha = MoveGalinha(jogo.galinha, jogo.heatmap, inputUsuario);
     jogo.mapa = AtualizaMapa(jogo.mapa);
 
-    jogo.galinha = ProcessaGalinhaAtropelamento(jogo.mapa, jogo.galinha, jogo.atropelamentos, 
-                                                jogo.heatmap, jogo.iteracao);
-
     return jogo;
 }
 
@@ -694,7 +718,7 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
 
     if(condicoesFim == 1){
         int qtdGanha = 10;
-        jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanha);
+        jogo.galinha = tGalinha_AtualizaPontuacao(jogo.galinha, qtdGanha);
     }
 
     ImprimePlacar(jogo);
@@ -718,8 +742,8 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
 // verifica colisao, reseta a galinha caso haja
 // salva atropelamento na matriz de atropelamentos;
 // caso contrario, aumenta a pontuacao
-tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], 
-                                        int heatmap[][100] , int iteracao   ){
+tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropelamentos[], 
+                                        int heatmap[][100], int iteracao, int ehAnimado   ){
 
     int i;
     for(i = 0; i < mapa.qtdPistas; i++){
@@ -731,7 +755,8 @@ tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelam
             if(carro_id){
 
                 tJogo_RegistroAtropelamentoHeatmap(heatmap, galinha, mapa);
-                RegistraAtropelamento(atropleamentos, mapa.pistas[i], galinha, carro_id, iteracao);
+                RegistraAtropelamento(atropelamentos, mapa.pistas[i], galinha, carro_id, iteracao);
+                mapa.pistas[i] = tPista_ReduzVelocidade(mapa.pistas[i], ehAnimado);
 
                 galinha = tGalinha_reseta(galinha);
                 tJogo_RegistroNormalHeatmap(heatmap, galinha);
@@ -873,7 +898,7 @@ char TerminalInput(tJogo jogo){
 }
 
 // Verifique se na pista atual da galinha, ha
-// alguma carro colindindo com ela
+// alguma carro colindindo com ela;
 // se houver, retorna o carro_id
 // se nao houver, retorna 0
 int EstaColidindo(tPista pista, tGalinha galinha){
@@ -919,7 +944,7 @@ int FimDeJogo(tJogo jogo){
     if(EhVitoria(jogo.mapa, jogo.galinha)){
 
         int qtdGanhaPts = 10;
-        jogo.galinha = AtualizaPontuacaoGalinha(jogo.galinha, qtdGanhaPts);
+        jogo.galinha = tGalinha_AtualizaPontuacao(jogo.galinha, qtdGanhaPts);
         return 1;
     }
 
@@ -1156,4 +1181,74 @@ int InicioSkinAnimacao(int iteracao, int ehAnimado){
     }
 
     return skinInicio;
+}
+
+tPista tPista_ReduzVelocidade(tPista pista, int ehAnimado){
+
+    if(ehAnimado && (pista.velocidade > 1)){
+        pista.velocidade--;
+    }
+
+    return pista;
+}
+
+// verifica colisao, reseta a galinha caso haja;
+// diminui a velocidade da pista caso seja bonus;
+// salva atropelamento na matriz de atropelamentos;
+// caso contrario, aumenta a pontuacao;
+tJogo tJogo_ProcessaAtropelamento(tJogo jogo){
+
+    int i;
+    int qtdPistas = tMapa_qtdPistas(jogo.mapa);
+    for(i = 0; i < qtdPistas; i++){
+
+        int indicePistaMatrix = i;
+        int pistaPos_y = tMapa_RetornaCentroPista_y(jogo.mapa, indicePistaMatrix);
+        int galinhaPos_y = GalinhaPosicao_y(jogo.galinha);
+        if(pistaPos_y == galinhaPos_y){
+            
+            int carro_id = tMapa_VerificaPistaColisao(jogo.mapa, indicePistaMatrix, jogo.galinha);
+            if(carro_id){
+
+                tPista pista = tMapa_RetornaPista(jogo.mapa, indicePistaMatrix);
+
+                tJogo_RegistroAtropelamentoHeatmap(jogo.heatmap, jogo.galinha, jogo.mapa);
+                RegistraAtropelamento(jogo.atropelamentos, pista, jogo.galinha, carro_id, jogo.iteracao);
+                jogo.mapa = tMapa_ReduzVelocidadePista(jogo.mapa, indicePistaMatrix, jogo.ehAnimado);
+
+                jogo.galinha = tGalinha_reseta(jogo.galinha);
+                tJogo_RegistroNormalHeatmap(jogo.heatmap, jogo.galinha);
+
+                return jogo;
+            }else{
+
+                jogo.galinha = tGalinha_AtualizaPontuacaoEAltura(jogo.galinha);
+
+                return jogo;
+            }
+        }
+    }
+
+    return jogo;
+}
+
+tMapa tMapa_ReduzVelocidadePista(tMapa mapa, int indicePista, int ehAnimado){
+    mapa.pistas[indicePista] = tPista_ReduzVelocidade(mapa.pistas[indicePista], ehAnimado);
+    return mapa;
+}
+
+tPista tMapa_RetornaPista(tMapa mapa, int indicePista){
+    return mapa.pistas[indicePista];
+}
+
+int tMapa_VerificaPistaColisao(tMapa mapa, int indicePista, tGalinha galinha){
+
+    int estaColidindo = EstaColidindo(mapa.pistas[indicePista], galinha);
+    return estaColidindo;
+}
+
+int tMapa_RetornaCentroPista_y(tMapa mapa, int pistaIndice){
+
+    int centro_y = CentroPistaPosicao_y(mapa.pistas[pistaIndice]);
+    return centro_y;
 }
