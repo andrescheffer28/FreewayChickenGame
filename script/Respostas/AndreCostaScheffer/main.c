@@ -20,7 +20,6 @@ typedef struct{
     int posicaoInicial_y;
     int pistaInicial_id;
     int alturaAnterior;
-    int alturaMaxVidaAtual;
     int alturaMaxAtinginda;
     int vidas;
     int pontuacao;
@@ -176,7 +175,6 @@ tGalinha InicializaGalinha(tGalinha galinha, int pistaGalinha_id, FILE *pFile){
 
     char ch;
     while(fscanf(pFile,"%c",&ch) == 1 && ch != 'G');
-    //fgetc(pFile);
     fscanf(pFile,"%d %d",&galinha.posicaoInicial_x,&galinha.vidas);
 
     galinha.posicaoInicial_y = CalculaPosicao_y(pistaGalinha_id);
@@ -184,7 +182,6 @@ tGalinha InicializaGalinha(tGalinha galinha, int pistaGalinha_id, FILE *pFile){
     galinha.posicao_x = galinha.posicaoInicial_x;
     galinha.posicao_y = galinha.posicaoInicial_y;
     galinha.alturaAnterior = galinha.posicaoInicial_y;
-    galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
     galinha.alturaMaxAtinginda = galinha.posicaoInicial_y;
 
     galinha.pistaInicial_id = pistaGalinha_id;
@@ -198,10 +195,6 @@ tGalinha InicializaGalinha(tGalinha galinha, int pistaGalinha_id, FILE *pFile){
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_y){
     
     galinha.posicao_y = novaPosicao_y;
-
-    if(galinha.alturaMaxAtinginda > galinha.posicao_y){
-        galinha.alturaMaxAtinginda = galinha.posicao_y;
-    }
 
     return galinha;
 }
@@ -279,17 +272,11 @@ void AtualizaPosicaoCarros(tCarro Carros[], int qtdCarros, char direcao, int vel
         if(direcao == 'D'){
             deslocamento = Carros[i].posicao_x + velocidade;
             deslocamento = (deslocamento%limitePista + limitePista)%limitePista;
-            /*
-            if(deslocamento > limitePista){
-                deslocamento = 1;
-            }*/
+
         }else{
             deslocamento = Carros[i].posicao_x - velocidade;
             deslocamento = (deslocamento%limitePista + limitePista)%limitePista;
-            /*
-            if(deslocamento < 1){
-                deslocamento = limitePista;
-            }*/
+
         }
 
         Carros[i].posicao_x = deslocamento;
@@ -732,8 +719,8 @@ tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamen
                     galinha.pontuacao++;
                 }
 
-                if(galinha.posicao_y < galinha.alturaMaxVidaAtual){
-                    galinha.alturaMaxVidaAtual = galinha.posicao_y;
+                if(galinha.alturaMaxAtinginda > galinha.posicao_y){
+                    galinha.alturaMaxAtinginda = galinha.posicao_y;
                 }
 
                 return galinha;
@@ -986,7 +973,6 @@ tGalinha tGalinha_reseta(tGalinha galinha){
 
     galinha.vidas--;
     galinha.pontuacao = 0;
-    galinha.alturaMaxVidaAtual = galinha.posicaoInicial_y;
     galinha.alturaAnterior = 0;
     galinha.posicao_y = galinha.posicaoInicial_y;
 
