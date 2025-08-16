@@ -142,8 +142,6 @@ tJogo ExecutaJogo(tJogo jogo, char *argv[]);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
 tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]);
 tJogo tJogo_ProcessaAtropelamento(tJogo jogo);
-tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropelamentos[], 
-                                        int heatmap[][100] , int iteracao, int ehAnimado);
 
 int InicioSkinAnimacao(int iteracao, int ehAnimado);
 void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centro_y, 
@@ -737,48 +735,6 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
     EncerraResumo(jogo.iteracao, argv);
 
     return jogo;
-}
-
-// verifica colisao, reseta a galinha caso haja
-// salva atropelamento na matriz de atropelamentos;
-// caso contrario, aumenta a pontuacao
-tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropelamentos[], 
-                                        int heatmap[][100], int iteracao, int ehAnimado   ){
-
-    int i;
-    for(i = 0; i < mapa.qtdPistas; i++){
-
-        int pos_y = CentroPistaPosicao_y(mapa.pistas[i]);
-        if(pos_y == galinha.posicao_y){
-
-            int carro_id = EstaColidindo(mapa.pistas[i], galinha);
-            if(carro_id){
-
-                tJogo_RegistroAtropelamentoHeatmap(heatmap, galinha, mapa);
-                RegistraAtropelamento(atropelamentos, mapa.pistas[i], galinha, carro_id, iteracao);
-                mapa.pistas[i] = tPista_ReduzVelocidade(mapa.pistas[i], ehAnimado);
-
-                galinha = tGalinha_reseta(galinha);
-                tJogo_RegistroNormalHeatmap(heatmap, galinha);
-
-                return galinha;
-            }else{
-
-                if(galinha.posicao_y < galinha.alturaAnterior){
-                    galinha.alturaAnterior = galinha.posicao_y;
-                    galinha.pontuacao++;
-                }
-
-                if(galinha.alturaMaxAtinginda > galinha.posicao_y){
-                    galinha.alturaMaxAtinginda = galinha.posicao_y;
-                }
-
-                return galinha;
-            }
-        }
-    }
-
-    return galinha;
 }
 
 // se for do tipo 2altura x 3 largura
