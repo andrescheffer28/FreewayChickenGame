@@ -30,7 +30,7 @@ typedef struct{
 tGalinha InicializaGalinha(tGalinha galinha,int pistaGalinha_id, FILE *pFile);
 tGalinha tGalinha_reseta(tGalinha galinha);
 tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_x);
-tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario);
+tGalinha MoveGalinha(tGalinha galinha, int heatmap[][100], char respostaUsuario);
 tGalinha AtualizaPontuacaoGalinha(tGalinha galinha, int qtdGanha);
 
 int GalinhaPosicao_y(tGalinha galinha);
@@ -135,9 +135,12 @@ tJogo InicializaJogo(char *argv[]);
 tJogo ExecutaJogo(tJogo jogo, char *argv[]);
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario);
 tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]);
-tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], int iteracao);
+tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], 
+                                        int heatmap[][100] , int iteracao);
 
-void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz);
+void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centro_y, 
+                                int larguraMapa, const char skin[], int inicioSkinMatriz);
+
 void DesenhaGalinha(char desenhoMapa[][102], int larguraMapa, tGalinha galinha, const char skinGalinha[]);
 void DesenhaCarros(char desenhoMapa[][102], int larguraMapa, tPista pista, const char skinCarro[]);
 void CriaArquivoInicializacao(tMapa mapa, tGalinha galinha, char *argv[]);
@@ -155,6 +158,11 @@ void CriaEstatistaFile(tGalinha galinha, tAtropelamento atropelamentos[], tMapa 
 void ResumeRodadaArquivo(int iteracao, tAtropelamento atropelamentos[], char *argv[]);
 void EncerraResumo(int iteracao, char *argv[]);
 void CriaRankingFile(tAtropelamento atropelamentos[], char *argv[]);
+
+void tJogo_InicializaHeatMap(int heatmap[][100], tMapa mapa);
+void tJogo_RegistroNormalHeatmap(int heatmap[][100], tGalinha galinha);
+void tJogo_RegistroAtropelamentoHeatmap(int heatmap[][100], tGalinha galinha, tMapa mapa);
+void CriaHeatmapFile(int heatmap[][100], tMapa mapa, char *argv[]);
 
 int main(int argc, char *argv[]){
 
@@ -202,7 +210,7 @@ tGalinha AtualizaPosicaoGalinha(tGalinha galinha, int novaPosicao_y){
 }
 
 // Move a galinha se for possivel
-tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
+tGalinha MoveGalinha(tGalinha galinha, int heatmap[][100], char respostaUsuario){
 
     galinha.alturaAnterior = galinha.posicao_y;
 
@@ -229,6 +237,7 @@ tGalinha MoveGalinha(tGalinha galinha, char respostaUsuario){
         galinha = AtualizaPosicaoGalinha(galinha, (galinha.posicao_y + parada));
     }
 
+    tJogo_RegistroNormalHeatmap(heatmap, galinha);
     return galinha;
 }
 
@@ -491,10 +500,12 @@ int tMapa_qtdPistas(tMapa mapa){
 tMapa DesenhaCenario(tMapa mapa){
 
     int i;
+    //desenha as pistas menos a da galinha
     for(i = 0; i < mapa.qtdPistas - 1; i++){
 
         int altura = CalculaAlturaSemBorda(i+1);
         int j;
+        //inicia na altura 0 em relacao a pista atual
         for(j = (altura - 3); j < altura; j++){
 
             //desenha 2 linhas vazias
@@ -505,6 +516,7 @@ tMapa DesenhaCenario(tMapa mapa){
                 }
 
             //desenha 1 linha padrao entre pistas
+            //na ultima linha da pista atual
             }else{
                 int k;
                 for(k = 0; k < mapa.largura; k++){
@@ -578,7 +590,7 @@ int CalculaPosicao_y(int ordemPistaCimaBaixo){
     return posicao_y;
 }
 
-// 1 pista corresponde a 1
+// a primeira pista corresponde ao valor 1
 int CalculaAlturaSemBorda(int qtdPistas){
 
     // Cada Pista tem 2 linhas vazias
@@ -627,10 +639,13 @@ tJogo InicializaJogo(char *argv[]){
     InicializaAtropIteracao(jogo.atropelamentos);
     jogo.skin = LeSkins(argv);
     jogo.mapa = DesenhaMapa(jogo);
+    tJogo_InicializaHeatMap(jogo.heatmap,jogo.mapa);
 
     CriaArquivoInicializacao(jogo.mapa, jogo.galinha, argv);
     ImprimePlacar(jogo);
     ImprimeMapa(jogo.mapa,stdout);
+
+    tJogo_RegistroNormalHeatmap(jogo.heatmap, jogo.galinha);
 
     return jogo;
 }
@@ -662,10 +677,11 @@ tJogo ExecutaJogo(tJogo jogo, char *argv[]){
 
 tJogo AtualizaEntidades(tJogo jogo, char inputUsuario){
 
-    jogo.galinha = MoveGalinha(jogo.galinha, inputUsuario);
+    jogo.galinha = MoveGalinha(jogo.galinha, jogo.heatmap, inputUsuario);
     jogo.mapa = AtualizaMapa(jogo.mapa);
 
-    jogo.galinha = ProcessaGalinhaAtropelamento(jogo.mapa, jogo.galinha, jogo.atropelamentos, jogo.iteracao);
+    jogo.galinha = ProcessaGalinhaAtropelamento(jogo.mapa, jogo.galinha, jogo.atropelamentos, 
+                                                jogo.heatmap, jogo.iteracao);
 
     return jogo;
 }
@@ -684,14 +700,15 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
     ImprimeMapa(jogo.mapa,stdout);  
 
     if(condicoesFim == 1){
-        printf("Parabens! Voce atravessou todas as pistas e venceu!\n");
+        printf("Parabens! Voce atravessou todas as pistas e venceu!");
 
     }else if(condicoesFim == 2){
-        printf("Voce perdeu todas as vidas! Fim de jogo.\n");
+        printf("Voce perdeu todas as vidas! Fim de jogo.");
     }
 
     CriaEstatistaFile(jogo.galinha, jogo.atropelamentos, jogo.mapa, argv);
     CriaRankingFile(jogo.atropelamentos,argv);
+    CriaHeatmapFile(jogo.heatmap, jogo.mapa, argv);
     EncerraResumo(jogo.iteracao, argv);
 
     return jogo;
@@ -700,7 +717,8 @@ tJogo TerminaJogo(tJogo jogo, int condicoesFim, char *argv[]){
 // verifica colisao, reseta a galinha caso haja
 // salva atropelamento na matriz de atropelamentos;
 // caso contrario, aumenta a pontuacao
-tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], int iteracao){
+tGalinha ProcessaGalinhaAtropelamento(  tMapa mapa, tGalinha galinha, tAtropelamento atropleamentos[], 
+                                        int heatmap[][100] , int iteracao   ){
 
     int i;
     for(i = 0; i < mapa.qtdPistas; i++){
@@ -711,8 +729,11 @@ tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamen
             int carro_id = EstaColidindo(mapa.pistas[i], galinha);
             if(carro_id){
 
+                tJogo_RegistroAtropelamentoHeatmap(heatmap, galinha, mapa);
                 RegistraAtropelamento(atropleamentos, mapa.pistas[i], galinha, carro_id, iteracao);
+
                 galinha = tGalinha_reseta(galinha);
+                tJogo_RegistroNormalHeatmap(heatmap, galinha);
 
                 return galinha;
             }else{
@@ -735,7 +756,8 @@ tGalinha ProcessaGalinhaAtropelamento(tMapa mapa, tGalinha galinha, tAtropelamen
 }
 
 // se for do tipo 2altura x 3 largura
-void DesenhaQualquerEntidade(char desenhoMapa[][102], int centro_x, int centro_y, int larguraMapa, const char skin[], int inicioSkinMatriz){
+void DesenhaQualquerEntidade(   char desenhoMapa[][102], int centro_x, int centro_y, 
+                                int larguraMapa, const char skin[], int inicioSkinMatriz){
     int j = inicioSkinMatriz;
     int centroMatriz_x = centro_x - 1;
     int cabecaCentro_y = centro_y - 1;
@@ -1041,5 +1063,98 @@ void tAtropelamento_sorting(tAtropelamento atropelamentos[]){
             }
         }
     }
+}
 
+void tJogo_InicializaHeatMap(int heatmap[][100], tMapa mapa){
+
+    int alturaMax = CalculaAlturaSemBorda(mapa.qtdPistas);
+    int i;
+    // altura -  1 retira a borda da galinha
+    for(i = 0; i < alturaMax - 1; i++){
+
+        int j;
+        for(j = 0; j < mapa.largura; j++){
+
+            heatmap[i][j] = 0;
+        }
+    }
+}
+
+void CriaHeatmapFile(int heatmap[][100], tMapa mapa, char *argv[]){
+
+    char diretorio[1020];
+    sprintf(diretorio,"%s/saida/heatmap.txt",argv[1]);
+    FILE *pfile = fopen(diretorio,"w");
+    if(pfile == NULL){
+        printf("Nao foi possivel criar heatmap no diretorio de saida\n");
+        fclose(pfile);
+    }
+
+    int alturaMax = CalculaAlturaSemBorda(mapa.qtdPistas);
+    int i;
+    // altura -  1 retira a borda da galinha
+    for(i = 0; i < alturaMax - 1; i++){
+        
+        int j;
+        for(j = 0; j < mapa.largura; j++){
+            if(heatmap[i][j] != -1){
+                fprintf(pfile,"%2d ",heatmap[i][j]); 
+
+            }else{
+                fprintf(pfile," * ");
+            }
+        }
+        fprintf(pfile,"\n");
+    }
+
+    fclose(pfile);
+}
+
+void tJogo_RegistroNormalHeatmap(int heatmap[][100], tGalinha galinha){
+
+    int centro_x = galinha.posicao_x - 1;
+    int esquerda_x = (centro_x - 1);
+    int direita_x = (centro_x + 1);
+
+    int centro_y = galinha.posicao_y - 1;
+
+    int i;
+    // i deve iteirar sobre as duas linhas 
+    for(i = centro_y; i <= centro_y + 1; i++){
+
+        int j;
+        for(j = esquerda_x; j <= direita_x; j++){
+
+            if(heatmap[i][j] != -1){
+                heatmap[i][j]++;
+            }
+        }
+    }
+}
+
+void tJogo_RegistroAtropelamentoHeatmap(int heatmap[][100], tGalinha galinha, tMapa mapa){
+
+    int centro_x = galinha.posicao_x - 1;
+    int esquerda_x = (centro_x - 1);
+    int direita_x = (centro_x + 1);
+
+    int centro_y = galinha.posicao_y - 1;
+
+    int i;
+    for(i = centro_y; i <= (centro_y + 1); i++){
+
+        int j;
+        for(j = 0; j < mapa.largura; j++){
+            heatmap[i][j] = -1;
+        }
+    }
+
+    /*
+    heatmap[centro_y][esquerda_x] = -1;
+    heatmap[centro_y][centro_x] = -1;
+    heatmap[centro_y][direita_x]  = -1;
+
+    heatmap[centro_y + 1][esquerda_x] = -1;
+    heatmap[centro_y + 1][centro_x]  = -1;
+    heatmap[centro_y + 1][direita_x]  = -1;*/
 }
