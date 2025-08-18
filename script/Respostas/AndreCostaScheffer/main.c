@@ -792,6 +792,8 @@ void tJogo_RegistroNormalHeatmap(int heatmap[][100], tGalinha galinha){
                 if(heatmap[i][j] > 99){
                     heatmap[i][j] = 99;
                 }
+            }else{
+                break;
             }
         }
     }
