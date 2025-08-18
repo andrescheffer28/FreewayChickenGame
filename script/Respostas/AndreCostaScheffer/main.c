@@ -65,7 +65,7 @@ typedef struct{
     int altura;
     int qtdPistas;
     tPista pistas[13];
-    // 100 colunas de espaço, 2 para bordas (0 e 101), e 1 \0
+    // 100 colunas de espaço, 2 para bordas (0 e 101), e 102 para \0
     char desenhoMapa[35][102];
 }tMapa;
 tMapa tMapa_Inicializa(tMapa mapa, FILE *pFile);
@@ -135,6 +135,7 @@ int tMapa_CentroPista_y(tMapa mapa, int pistaIndice);
 int tMapa_qtdPistas(tMapa mapa);
 
 // Jogo
+
 int tJogo_EhVitoria(tMapa mapa, tGalinha galinha);
 int tJogo_FimDeJogo(tJogo jogo);
 
