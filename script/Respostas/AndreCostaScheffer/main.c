@@ -784,9 +784,14 @@ void tJogo_RegistroNormalHeatmap(int heatmap[][100], tGalinha galinha){
         int j;
         for(j = esquerda_x; j <= direita_x; j++){
 
-            // condicao para nao alterar que registrou um atropelamento
+            // Condicao para nao alterar que registrou um atropelamento
             if(heatmap[i][j] != -1){
                 heatmap[i][j]++;
+
+                // Garante que o valor nao passe de 99
+                if(heatmap[i][j] > 99){
+                    heatmap[i][j] = 99;
+                }
             }
         }
     }
