@@ -96,7 +96,7 @@ void tJogo_RegistroAtropelamentoHeatmap(int heatmap[][100], tGalinha galinha, tM
 void CriaHeatmapFile(int heatmap[][100], tMapa mapa, char *argv[]);
 
 //=============//
-// UTILITÁRIAS //
+// UTILITARIAS //
 //=============//
 
 // Genericas
